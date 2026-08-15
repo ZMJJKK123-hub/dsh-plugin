@@ -310,4 +310,60 @@ describe('ChangeMonitorService lifecycle', () => {
       expect(hunkLines.some(line => line.kind === 'add' && line.text === 'v2')).toBe(true)
     }
   })
+
+  it('does not misreport a mid-turn commit of a dirty file as a deletion', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+    // Dirty at turn start: the before snapshot holds tracked.txt (v2).
+    await writeFile(join(workspace, 'tracked.txt'), 'v2\n', 'utf8')
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    // The turn commits the dirty file: the turn-end candidate set no longer
+    // lists it, so without reconciliation the before file would read as
+    // deleted. Its content is unchanged (v2 == before), so it must not.
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'mid-turn'], { cwd: workspace })
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 1 after mid-turn commit')
+    expect(summary.files).toEqual([])
+  })
+
+  it('reports a file committed twice mid-turn when the content moved on', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+    // Dirty at turn start: before holds v2.
+    await writeFile(join(workspace, 'tracked.txt'), 'v2\n', 'utf8')
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    // Commit v2, then edit to v3 and commit that too: the turn-end candidate
+    // set is empty, but the disk differs from the before snapshot, so the
+    // reconciliation must re-add it and report a modification.
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'v2'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v3\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'v3'], { cwd: workspace })
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 after double commit')
+    const tracked = summary.files.find(file => file.path === 'tracked.txt')
+    expect(tracked?.status).toBe('modified')
+  })
 })

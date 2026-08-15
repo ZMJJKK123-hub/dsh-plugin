@@ -47,7 +47,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
-// src/index.ts
+// packages/session/change-monitor/src/index.ts
 import z from "@deepseek-ai/schemastery";
 import { createHash as createHash2 } from "node:crypto";
 import { stat as stat2 } from "node:fs/promises";
@@ -55,7 +55,7 @@ import { join as join3 } from "node:path";
 import { dshHomePath } from "@deepseek-ai/dsh-home-paths";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 
-// src/diff.ts
+// packages/session/change-monitor/src/diff.ts
 function linesOf(text) {
   if (text === "") return [];
   const lines = text.split("\n");
@@ -261,7 +261,7 @@ function newForIndex(index, ops, totalAfter) {
 var DEFAULT_CONTEXT_LINES = 5;
 var DEFAULT_MAX_DIFF_CELLS = 25e6;
 
-// src/ignore.ts
+// packages/session/change-monitor/src/ignore.ts
 var DEFAULT_IGNORE_PATTERNS = [
   // Directories.
   ".git/",
@@ -381,7 +381,7 @@ var CompiledIgnore = class {
   }
 };
 
-// src/snapshot.ts
+// packages/session/change-monitor/src/snapshot.ts
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { lstat, open, readdir, stat } from "node:fs/promises";
@@ -637,7 +637,7 @@ async function hasGitRoot(root) {
   }
   return false;
 }
-async function snapshotCandidates(root, paths, options) {
+async function snapshotCandidates(root, paths, options, before) {
   const files = /* @__PURE__ */ new Map();
   for (let offset = 0; offset < paths.length; offset += FILE_CONCURRENCY) {
     const batch = paths.slice(offset, offset + FILE_CONCURRENCY);
@@ -646,6 +646,14 @@ async function snapshotCandidates(root, paths, options) {
       const path = batch[index];
       const meta = metas[index];
       if (path !== void 0 && meta !== void 0) files.set(path, meta);
+    }
+  }
+  if (before !== void 0) {
+    for (const [path] of before.files) {
+      if (files.has(path)) continue;
+      const meta = await metaOf(join(root, path), path, options);
+      if (meta === void 0) continue;
+      files.set(path, meta);
     }
   }
   return { root, time: Date.now(), files };
@@ -679,7 +687,7 @@ function execFileAsync(file, args, options) {
   });
 }
 
-// src/storage.ts
+// packages/session/change-monitor/src/storage.ts
 import { mkdir, readFile, readdir as readdir2, rename, unlink, writeFile } from "node:fs/promises";
 import { join as join2 } from "node:path";
 var RENAME_ATTEMPTS = 3;
@@ -894,7 +902,7 @@ function storedFileOf(record, path) {
   return record.files.find((file) => file.path === path);
 }
 
-// src/index.ts
+// packages/session/change-monitor/src/index.ts
 var DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
 var DEFAULT_SETTLE_DELAY_MS = 200;
 var DEFAULT_SETTLE_MAX_ATTEMPTS = 5;
@@ -1039,7 +1047,7 @@ var ChangeMonitorService = class extends (_a = TypertRemoteService, _turns_dec =
         maxSnapshotFileSize: this.config.maxSnapshotFileSize,
         ignore: this.ignore,
         retainContent: false
-      });
+      }, before);
       const beforeMerged = await this.backfillHeadBefore(root, before, after);
       const record2 = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, after);
       this.latest.set(sessionId, summarizeChangeSet(record2));

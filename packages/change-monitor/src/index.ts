@@ -310,7 +310,7 @@ export class ChangeMonitorService extends TypertRemoteService {
         maxSnapshotFileSize: this.config.maxSnapshotFileSize,
         ignore: this.ignore,
         retainContent: false,
-      })
+      }, before)
       // A candidate new to the turn-end set (clean at turn start, changed
       // during the turn) has no before snapshot; git's HEAD version is the
       // exact turn-start state, so backfill it into the BEFORE snapshot

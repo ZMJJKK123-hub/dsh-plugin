@@ -451,15 +451,26 @@ async function hasGitRoot(root: string): Promise<boolean> {
  * Directory entries are rejected (git status lists files, not directories,
  * with `--untracked-files=all`); the walker's per-file error containment
  * applies per candidate.
+ *
+ * When `before` is supplied, paths present there but absent from the
+ * candidate set are reconciled: a file still on disk whose content changed
+ * (e.g. committed mid-turn, then edited again) is re-added so the diff sees
+ * it; a file still on disk with unchanged content (committed mid-turn, or
+ * never touched) stays out; only a file gone from disk reads as deleted.
+ * Without this, a mid-turn commit would misreport every committed file as
+ * deleted (the before set holds it, the turn-end candidate set no longer
+ * does).
  * @param root - workspace root directory.
  * @param paths - candidate paths relative to the root.
  * @param options - cap, ignore set, and content-retention choice.
+ * @param before - the turn-start snapshot whose missing paths to reconcile.
  * @returns the candidate snapshot.
  */
 export async function snapshotCandidates(
   root: string,
   paths: readonly string[],
   options: SnapshotOptions,
+  before?: WorkspaceSnapshot,
 ): Promise<WorkspaceSnapshot> {
   const files = new Map<string, SnapshotFileMeta>()
   for (let offset = 0; offset < paths.length; offset += FILE_CONCURRENCY) {
@@ -470,6 +481,18 @@ export async function snapshotCandidates(
       const path = batch[index]
       const meta = metas[index]
       if (path !== undefined && meta !== undefined) files.set(path, meta)
+    }
+  }
+  if (before !== undefined) {
+    for (const [path] of before.files) {
+      if (files.has(path)) continue
+      const meta = await metaOf(join(root, path), path, options)
+      if (meta === undefined) continue // Gone from disk: a genuine deletion.
+      // Survivor (committed mid-turn, possibly edited again): re-add it; the
+      // diff engine drops hash-identical entries and reports a changed one as
+      // modified. Without this a mid-turn commit would misread every
+      // committed file as deleted.
+      files.set(path, meta)
     }
   }
   return { root, time: Date.now(), files }
