@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import type { ChangeSetSummary } from '@dsh-custom/dsh-change-monitor'
+import type { ChangeSetSummary } from '@deepseek-ai/dsh-change-monitor'
 // Type-only: pulls the LocaleNamespaceMap augmentation declared by the plugin entry.
 import type {} from '../src/client/index.ts'
 import type { ChangeMonitorController } from '../src/client/controller.ts'
@@ -47,11 +47,16 @@ describe('ChangesRow', () => {
     expect(screen.getByText('正在计算更改…')).toBeDefined()
   })
 
-  it('renders nothing when the turn changed no files', async () => {
+  it('shows a quiet confirmation when the turn changed no files', async () => {
     const controller = { summaryFor: vi.fn(async () => ({ ...summary(), files: [] })) } as unknown as ChangeMonitorController
-    const { container } = render(<ChangesRow {...props(controller)} />)
-    await act(async () => { await Promise.resolve() })
-    expect(container.innerHTML).toBe('')
+    render(<ChangesRow {...props(controller)} />)
+    await screen.findByText('当前目录下没有文件更改')
+  })
+
+  it('shows the confirmation when the record is missing entirely', async () => {
+    const controller = { summaryFor: vi.fn(async () => null) } as unknown as ChangeMonitorController
+    render(<ChangesRow {...props(controller)} />)
+    await screen.findByText('当前目录下没有文件更改')
   })
 
   it('renders the summary line and expands the panel', async () => {

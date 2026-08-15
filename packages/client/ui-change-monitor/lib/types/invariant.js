@@ -1,8 +1,8 @@
 /**
- * Package-owned invariant companion for `@dsh-custom/dsh-client-ui-change-monitor`.
- * @module @dsh-custom/dsh-client-ui-change-monitor/invariant
+ * Package-owned invariant companion for `@deepseek-ai/dsh-client-ui-change-monitor`.
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/invariant
  */
-const PACKAGE_NAME = '@dsh-custom/dsh-client-ui-change-monitor';
+const PACKAGE_NAME = '@deepseek-ai/dsh-client-ui-change-monitor';
 /** Cordis companion plugin name. */
 export const name = 'ui-change-monitor-invariant';
 /** Service required before the companion can reserve package ownership. */

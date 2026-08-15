@@ -32,8 +32,12 @@ export function ChangesRow({ matched, controller, t }) {
         // visible placeholder so the row reads as "working", not "missing".
         return (_jsx("div", { className: css.root, "data-changes-row": true, "data-changes-loading": true, children: _jsx("div", { className: css.loading, children: t('history.loading') }) }));
     }
-    if (summary === null || summary.files.length === 0)
-        return null;
+    if (summary === null || summary.files.length === 0) {
+        // The settle finished and found nothing: show a quiet confirmation so a
+        // turn with no workspace edits reads as "checked, nothing changed"
+        // instead of an empty gap that looks like the plugin never fired.
+        return (_jsx("div", { className: css.root, "data-changes-row": true, "data-changes-none": true, children: _jsx("div", { className: css.noChanges, children: t('row.noChanges') }) }));
+    }
     const filesLabel = summary.files.length === 1
         ? t('summary.files.one')
         : t('summary.files', { count: String(summary.files.length) });

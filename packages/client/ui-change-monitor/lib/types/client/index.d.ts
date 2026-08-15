@@ -3,7 +3,7 @@
  * (api-remotes does not include it), then registers the turn-tail changes row
  * under every completed turn. All data flows through a per-session
  * controller; every failure degrades to "no changes", never an error.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 import { type ChangeMonitorKey } from './locales.ts';

@@ -18,6 +18,7 @@ export type ChangeMonitorKey =
   | 'status.deleted'
   | 'binary.summary'
   | 'history.loading'
+  | 'row.noChanges'
   | 'diff.copy'
   | 'diff.copied'
   | 'diff.skipped'
@@ -35,6 +36,7 @@ export const en: Record<ChangeMonitorKey, string> = {
   'status.deleted': 'D',
   'binary.summary': 'Binary file changed',
   'history.loading': 'Computing changes…',
+  'row.noChanges': 'No file changes in this workspace',
   'diff.copy': 'Copy diff',
   'diff.copied': 'Copied',
   'diff.skipped': '⋯ {count} lines skipped',
@@ -53,6 +55,7 @@ export const zh: Record<ChangeMonitorKey, string> = {
   'status.deleted': 'D',
   'binary.summary': '二进制文件已更改',
   'history.loading': '正在计算更改…',
+  'row.noChanges': '当前目录下没有文件更改',
   'diff.copy': '复制 Diff',
   'diff.copied': '已复制',
   'diff.skipped': '⋯ 此处省略 {count} 行',

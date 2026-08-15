@@ -13,6 +13,13 @@
   line-height: 22px;
 }
 
+.noChanges {
+  padding: 3px 10px;
+  color: var(--dsw-alias-label-dimmed);
+  font-size: 12px;
+  line-height: 22px;
+}
+
 .trigger {
   display: inline-flex;
   align-items: center;

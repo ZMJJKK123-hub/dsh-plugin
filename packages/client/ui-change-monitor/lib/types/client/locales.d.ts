@@ -4,7 +4,7 @@
  */
 export declare const NS = "changeMonitor";
 /** Dictionary keys owned by this plugin. */
-export type ChangeMonitorKey = 'summary.files' | 'summary.files.one' | 'summary.additions' | 'summary.deletions' | 'row.view' | 'row.hide' | 'status.modified' | 'status.added' | 'status.deleted' | 'binary.summary' | 'history.loading' | 'diff.copy' | 'diff.copied' | 'diff.skipped';
+export type ChangeMonitorKey = 'summary.files' | 'summary.files.one' | 'summary.additions' | 'summary.deletions' | 'row.view' | 'row.hide' | 'status.modified' | 'status.added' | 'status.deleted' | 'binary.summary' | 'history.loading' | 'row.noChanges' | 'diff.copy' | 'diff.copied' | 'diff.skipped';
 /** English copy. */
 export declare const en: Record<ChangeMonitorKey, string>;
 /** Chinese copy. */

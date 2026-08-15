@@ -1,12 +1,12 @@
 window.__ModuleLoader__.load({
-	id: "@dsh-custom/dsh-client-ui-change-monitor",
+	id: "@deepseek-ai/dsh-client-ui-change-monitor",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
 		var _a$1;
 		function $constructor(name, initializer, params) {
 			function init(inst, def) {
@@ -65,7 +65,7 @@ window.__ModuleLoader__.load({
 			return globalConfig;
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
 		function getEnumValues(entries) {
 			const numericValues = Object.values(entries).filter((v) => typeof v === "number");
 			return Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
@@ -377,7 +377,7 @@ window.__ModuleLoader__.load({
 			return { ...iss };
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
 		const initializer$1 = (inst, def) => {
 			inst.name = "$ZodError";
 			Object.defineProperty(inst, "_zod", {
@@ -437,7 +437,7 @@ window.__ModuleLoader__.load({
 			return fieldErrors;
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
 		const _parse = (_Err) => (schema, value, _ctx, _params) => {
 			const ctx = _ctx ? {
 				..._ctx,
@@ -551,7 +551,7 @@ window.__ModuleLoader__.load({
 			return _safeParseAsync(_Err)(schema, value, _ctx);
 		};
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
 		/**
 		* @deprecated CUID v1 is deprecated by its authors due to information leakage
 		* (timestamps embedded in the id). Use {@link cuid2} instead.
@@ -614,7 +614,7 @@ window.__ModuleLoader__.load({
 		const lowercase = /^[^A-Z]*$/;
 		const uppercase = /^[^a-z]*$/;
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
 		const $ZodCheck = /*@__PURE__*/ $constructor("$ZodCheck", (inst, def) => {
 			var _a;
 			inst._zod ?? (inst._zod = {});
@@ -972,7 +972,7 @@ window.__ModuleLoader__.load({
 			};
 		});
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
 		var Doc = class {
 			constructor(args = []) {
 				this.content = [];
@@ -1003,14 +1003,14 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
 		const version = {
 			major: 4,
 			minor: 4,
 			patch: 3
 		};
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
 		const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
 			var _a;
 			inst ?? (inst = {});
@@ -2113,7 +2113,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
 		var _a;
 		var $ZodRegistry = class {
 			constructor() {
@@ -2160,7 +2160,7 @@ window.__ModuleLoader__.load({
 		(_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
 		const globalRegistry = globalThis.__zod_globalRegistry;
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
 		// @__NO_SIDE_EFFECTS__
 		function _string(Class, params) {
 			return new Class({
@@ -2658,7 +2658,7 @@ window.__ModuleLoader__.load({
 			return ch;
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
 		function initializeContext(params) {
 			let target = params?.target ?? "draft-2020-12";
 			if (target === "draft-4") target = "draft-04";
@@ -2951,7 +2951,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return finalize(ctx, schema);
 		};
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
 		const formatMap = {
 			guid: "uuid",
 			url: "uri",
@@ -3177,7 +3177,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			seen.ref = def.innerType;
 		};
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
 		const ZodISODateTime = /*@__PURE__*/ $constructor("ZodISODateTime", (inst, def) => {
 			$ZodISODateTime.init(inst, def);
 			ZodStringFormat.init(inst, def);
@@ -3207,7 +3207,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _isoDuration(ZodISODuration, params);
 		}
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
 		const initializer = (inst, issues) => {
 			$ZodError.init(inst, issues);
 			inst.name = "ZodError";
@@ -3229,7 +3229,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		};
 		const ZodRealError = /*@__PURE__*/ $constructor("ZodError", initializer, { Parent: Error });
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
 		const parse = /* @__PURE__ */ _parse(ZodRealError);
 		const parseAsync = /* @__PURE__ */ _parseAsync(ZodRealError);
 		const safeParse = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -3243,7 +3243,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		const safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 		const safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 		//#endregion
-		//#region ../../../../myself-deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
 		const _installedGroups = /* @__PURE__ */ new WeakMap();
 		function _installLazyMethods(inst, group, methods) {
 			const proto = Object.getPrototypeOf(inst);
@@ -4007,7 +4007,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _superRefine(fn, params);
 		}
 		//#endregion
-		//#region ../../change-monitor/lib/typert.remote-client.js
+		//#region ../../session/change-monitor/lib/typert.remote-client.js
 		const _deepseek_ai_dsh_change_monitor_changeMonitor_current_parameter_0$schema = object({ "sessionId": intersection(string(), unknown()) });
 		const _deepseek_ai_dsh_change_monitor_changeMonitor_current_result$schema = union([object({
 			"ok": literal(true).readonly(),
@@ -4243,7 +4243,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 456,
+						"line": 542,
 						"column": 9
 					}
 				},
@@ -4261,7 +4261,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 470,
+						"line": 556,
 						"column": 9
 					}
 				},
@@ -4288,7 +4288,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 494,
+						"line": 580,
 						"column": 9
 					}
 				},
@@ -4315,7 +4315,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 514,
+						"line": 600,
 						"column": 9
 					}
 				},
@@ -4342,7 +4342,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 480,
+						"line": 566,
 						"column": 9
 					}
 				},
@@ -4369,7 +4369,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/session/change-monitor/src/index.ts",
-						"line": 443,
+						"line": 529,
 						"column": 9
 					}
 				}
@@ -4478,39 +4478,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		};
 		//#endregion
-		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\DiffViewer.module.css.mjs
-		const css$2 = "._3xq3Zq_root{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);border-radius:8px;grid-template-columns:minmax(0,1fr);font-size:12.5px;line-height:1.6;display:grid;overflow:hidden}._3xq3Zq_header{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);align-items:center;gap:8px;padding:6px 10px;display:flex}._3xq3Zq_status{text-align:center;width:16px;font-size:12px;font-weight:600}._3xq3Zq_status._3xq3Zq_modified{color:var(--dsw-alias-state-business-primary)}._3xq3Zq_status._3xq3Zq_added{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_status._3xq3Zq_deleted{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_path{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}._3xq3Zq_counts{gap:6px;font-size:12px;display:inline-flex}._3xq3Zq_addCount{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_delCount{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_copy{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;border:none;border-radius:4px;padding:1px 8px;font-size:12px}._3xq3Zq_copy:hover{background:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._3xq3Zq_binary{color:var(--dsw-alias-label-tertiary);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);justify-content:space-between;gap:8px;padding:10px 12px;font-size:12.5px;display:flex}._3xq3Zq_body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-height:480px;padding:4px 0;overflow:auto}._3xq3Zq_line{white-space:pre;grid-template-columns:44px 44px 18px minmax(0,1fr);min-height:20px;display:grid}._3xq3Zq_oldNo,._3xq3Zq_newNo{color:var(--dsw-alias-label-dimmed);text-align:right;user-select:none;padding-right:8px}._3xq3Zq_sign{text-align:center;user-select:none;color:var(--dsw-alias-label-tertiary)}._3xq3Zq_text{color:var(--dsw-alias-label-primary);overflow-x:hidden}._3xq3Zq_lineDel{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 20%, transparent)}._3xq3Zq_lineDel ._3xq3Zq_text,._3xq3Zq_lineDel ._3xq3Zq_sign{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_lineAdd{background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent)}._3xq3Zq_lineAdd ._3xq3Zq_text,._3xq3Zq_lineAdd ._3xq3Zq_sign{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_lineContext{background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 8%, transparent)}._3xq3Zq_skipped{text-align:center;color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 5%, transparent);user-select:none;grid-column:1/-1;padding:2px 0;font-size:12px}";
-		const tagId$2 = "@dsh-custom/dsh-client-ui-change-monitor/DiffViewer.module.css";
+		//#region \0dsh-css:C:\Users\59639\Desktop\myself-deepseek-harness\packages\client\ui-change-monitor\src\client\DiffViewer.module.css.mjs
+		const css$2 = ".gwEXQq_root{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);border-radius:8px;grid-template-columns:minmax(0,1fr);font-size:12.5px;line-height:1.6;display:grid;overflow:hidden}.gwEXQq_header{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);align-items:center;gap:8px;padding:6px 10px;display:flex}.gwEXQq_status{text-align:center;width:16px;font-size:12px;font-weight:600}.gwEXQq_status.gwEXQq_modified{color:var(--dsw-alias-state-business-primary)}.gwEXQq_status.gwEXQq_added{color:var(--dsw-alias-state-success-primary)}.gwEXQq_status.gwEXQq_deleted{color:var(--dsw-alias-state-error-primary)}.gwEXQq_path{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.gwEXQq_counts{gap:6px;font-size:12px;display:inline-flex}.gwEXQq_addCount{color:var(--dsw-alias-state-success-primary)}.gwEXQq_delCount{color:var(--dsw-alias-state-error-primary)}.gwEXQq_copy{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;border:none;border-radius:4px;padding:1px 8px;font-size:12px}.gwEXQq_copy:hover{background:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}.gwEXQq_binary{color:var(--dsw-alias-label-tertiary);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);justify-content:space-between;gap:8px;padding:10px 12px;font-size:12.5px;display:flex}.gwEXQq_body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-height:480px;padding:4px 0;overflow:auto}.gwEXQq_line{white-space:pre;grid-template-columns:44px 44px 18px minmax(0,1fr);min-height:20px;display:grid}.gwEXQq_oldNo,.gwEXQq_newNo{color:var(--dsw-alias-label-dimmed);text-align:right;user-select:none;padding-right:8px}.gwEXQq_sign{text-align:center;user-select:none;color:var(--dsw-alias-label-tertiary)}.gwEXQq_text{color:var(--dsw-alias-label-primary);overflow-x:hidden}.gwEXQq_lineDel{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 20%, transparent)}.gwEXQq_lineDel .gwEXQq_text,.gwEXQq_lineDel .gwEXQq_sign{color:var(--dsw-alias-state-error-primary)}.gwEXQq_lineAdd{background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent)}.gwEXQq_lineAdd .gwEXQq_text,.gwEXQq_lineAdd .gwEXQq_sign{color:var(--dsw-alias-state-success-primary)}.gwEXQq_lineContext{background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 8%, transparent)}.gwEXQq_skipped{text-align:center;color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 5%, transparent);user-select:none;grid-column:1/-1;padding:2px 0;font-size:12px}";
+		const tagId$2 = "@deepseek-ai/dsh-client-ui-change-monitor/DiffViewer.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@dsh-custom/dsh-client-ui-change-monitor";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-change-monitor";
 			tag.dataset.pluginCss = tagId$2;
 			tag.textContent = css$2;
 			document.head.appendChild(tag);
 		}
 		var DiffViewer_module_css_default = {
-			"lineContext": "_3xq3Zq_lineContext",
-			"copy": "_3xq3Zq_copy",
-			"body": "_3xq3Zq_body",
-			"header": "_3xq3Zq_header",
-			"newNo": "_3xq3Zq_newNo",
-			"added": "_3xq3Zq_added",
-			"skipped": "_3xq3Zq_skipped",
-			"counts": "_3xq3Zq_counts",
-			"status": "_3xq3Zq_status",
-			"binary": "_3xq3Zq_binary",
-			"root": "_3xq3Zq_root",
-			"deleted": "_3xq3Zq_deleted",
-			"addCount": "_3xq3Zq_addCount",
-			"path": "_3xq3Zq_path",
-			"sign": "_3xq3Zq_sign",
-			"modified": "_3xq3Zq_modified",
-			"text": "_3xq3Zq_text",
-			"oldNo": "_3xq3Zq_oldNo",
-			"lineDel": "_3xq3Zq_lineDel",
-			"delCount": "_3xq3Zq_delCount",
-			"lineAdd": "_3xq3Zq_lineAdd",
-			"line": "_3xq3Zq_line"
+			"added": "gwEXQq_added",
+			"newNo": "gwEXQq_newNo",
+			"lineAdd": "gwEXQq_lineAdd",
+			"header": "gwEXQq_header",
+			"addCount": "gwEXQq_addCount",
+			"oldNo": "gwEXQq_oldNo",
+			"path": "gwEXQq_path",
+			"binary": "gwEXQq_binary",
+			"sign": "gwEXQq_sign",
+			"text": "gwEXQq_text",
+			"root": "gwEXQq_root",
+			"lineDel": "gwEXQq_lineDel",
+			"lineContext": "gwEXQq_lineContext",
+			"copy": "gwEXQq_copy",
+			"status": "gwEXQq_status",
+			"modified": "gwEXQq_modified",
+			"body": "gwEXQq_body",
+			"counts": "gwEXQq_counts",
+			"delCount": "gwEXQq_delCount",
+			"line": "gwEXQq_line",
+			"skipped": "gwEXQq_skipped",
+			"deleted": "gwEXQq_deleted"
 		};
 		/**
 		* Fold one hunk's lines: a run of consecutive context lines longer than
@@ -4703,31 +4703,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 		}
 		//#endregion
-		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\ChangesPanel.module.css.mjs
-		const css$1 = ".l2-mUa_root{gap:2px;display:grid}.l2-mUa_list{gap:1px;margin:0;padding:0;list-style:none;display:grid}.l2-mUa_row{width:100%;color:var(--dsw-alias-label-primary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:none;border-radius:5px;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:8px;padding:3px 8px;font-size:12.5px;display:grid}.l2-mUa_row:hover,.l2-mUa_rowSelected{background:var(--dsw-alias-interactive-bg-hover)}.l2-mUa_status{text-align:center;font-size:12px;font-weight:600}.l2-mUa_status.l2-mUa_modified{color:var(--dsw-alias-state-business-primary)}.l2-mUa_status.l2-mUa_added{color:var(--dsw-alias-state-success-primary)}.l2-mUa_status.l2-mUa_deleted{color:var(--dsw-alias-state-error-primary)}.l2-mUa_path{text-overflow:ellipsis;white-space:nowrap;font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);font-size:12px;overflow:hidden}.l2-mUa_counts{font-family:var(--dsw-alias-font-family,system-ui, sans-serif);gap:6px;font-size:12px;display:inline-flex}.l2-mUa_addCount{color:var(--dsw-alias-state-success-primary)}.l2-mUa_delCount{color:var(--dsw-alias-state-error-primary)}.l2-mUa_diff{padding:4px 0 4px 28px}.l2-mUa_loading{color:var(--dsw-alias-label-tertiary);padding:6px 8px;font-size:12px}";
-		const tagId$1 = "@dsh-custom/dsh-client-ui-change-monitor/ChangesPanel.module.css";
+		//#region \0dsh-css:C:\Users\59639\Desktop\myself-deepseek-harness\packages\client\ui-change-monitor\src\client\ChangesPanel.module.css.mjs
+		const css$1 = ".iQ-vNW_root{gap:2px;display:grid}.iQ-vNW_list{gap:1px;margin:0;padding:0;list-style:none;display:grid}.iQ-vNW_row{width:100%;color:var(--dsw-alias-label-primary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:none;border-radius:5px;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:8px;padding:3px 8px;font-size:12.5px;display:grid}.iQ-vNW_row:hover,.iQ-vNW_rowSelected{background:var(--dsw-alias-interactive-bg-hover)}.iQ-vNW_status{text-align:center;font-size:12px;font-weight:600}.iQ-vNW_status.iQ-vNW_modified{color:var(--dsw-alias-state-business-primary)}.iQ-vNW_status.iQ-vNW_added{color:var(--dsw-alias-state-success-primary)}.iQ-vNW_status.iQ-vNW_deleted{color:var(--dsw-alias-state-error-primary)}.iQ-vNW_path{text-overflow:ellipsis;white-space:nowrap;font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);font-size:12px;overflow:hidden}.iQ-vNW_counts{font-family:var(--dsw-alias-font-family,system-ui, sans-serif);gap:6px;font-size:12px;display:inline-flex}.iQ-vNW_addCount{color:var(--dsw-alias-state-success-primary)}.iQ-vNW_delCount{color:var(--dsw-alias-state-error-primary)}.iQ-vNW_diff{padding:4px 0 4px 28px}.iQ-vNW_loading{color:var(--dsw-alias-label-tertiary);padding:6px 8px;font-size:12px}";
+		const tagId$1 = "@deepseek-ai/dsh-client-ui-change-monitor/ChangesPanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@dsh-custom/dsh-client-ui-change-monitor";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-change-monitor";
 			tag.dataset.pluginCss = tagId$1;
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
 		var ChangesPanel_module_css_default = {
-			"deleted": "l2-mUa_deleted",
-			"status": "l2-mUa_status",
-			"modified": "l2-mUa_modified",
-			"diff": "l2-mUa_diff",
-			"loading": "l2-mUa_loading",
-			"list": "l2-mUa_list",
-			"added": "l2-mUa_added",
-			"rowSelected": "l2-mUa_rowSelected",
-			"addCount": "l2-mUa_addCount",
-			"row": "l2-mUa_row",
-			"root": "l2-mUa_root",
-			"path": "l2-mUa_path",
-			"counts": "l2-mUa_counts",
-			"delCount": "l2-mUa_delCount"
+			"row": "iQ-vNW_row",
+			"deleted": "iQ-vNW_deleted",
+			"status": "iQ-vNW_status",
+			"modified": "iQ-vNW_modified",
+			"rowSelected": "iQ-vNW_rowSelected",
+			"list": "iQ-vNW_list",
+			"root": "iQ-vNW_root",
+			"path": "iQ-vNW_path",
+			"added": "iQ-vNW_added",
+			"addCount": "iQ-vNW_addCount",
+			"counts": "iQ-vNW_counts",
+			"diff": "iQ-vNW_diff",
+			"delCount": "iQ-vNW_delCount",
+			"loading": "iQ-vNW_loading"
 		};
 		//#endregion
 		//#region src/client/ChangesPanel.tsx
@@ -4803,26 +4803,27 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return status === "modified" ? "M" : status === "added" ? "A" : "D";
 		}
 		//#endregion
-		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\ChangesRow.module.css.mjs
-		const css = ".BHSpvq_root{justify-items:start;margin-top:14px;display:grid}.BHSpvq_loading{color:var(--dsw-alias-label-tertiary);padding:3px 10px;font-size:12.5px;line-height:22px}.BHSpvq_trigger{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:14px;align-items:center;gap:10px;padding:3px 10px;font-size:12.5px;line-height:22px;display:inline-flex}.BHSpvq_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.BHSpvq_files{font-weight:600}.BHSpvq_counts{gap:6px;display:inline-flex}.BHSpvq_addCount{color:var(--dsw-alias-state-success-primary)}.BHSpvq_delCount{color:var(--dsw-alias-state-error-primary)}.BHSpvq_action{color:var(--dsw-alias-label-tertiary)}.BHSpvq_panel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:8px;width:min(720px,100%);margin-top:6px;padding:6px}";
-		const tagId = "@dsh-custom/dsh-client-ui-change-monitor/ChangesRow.module.css";
+		//#region \0dsh-css:C:\Users\59639\Desktop\myself-deepseek-harness\packages\client\ui-change-monitor\src\client\ChangesRow.module.css.mjs
+		const css = "._1HT81q_root{justify-items:start;margin-top:14px;display:grid}._1HT81q_loading{color:var(--dsw-alias-label-tertiary);padding:3px 10px;font-size:12.5px;line-height:22px}._1HT81q_noChanges{color:var(--dsw-alias-label-dimmed);padding:3px 10px;font-size:12px;line-height:22px}._1HT81q_trigger{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:14px;align-items:center;gap:10px;padding:3px 10px;font-size:12.5px;line-height:22px;display:inline-flex}._1HT81q_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}._1HT81q_files{font-weight:600}._1HT81q_counts{gap:6px;display:inline-flex}._1HT81q_addCount{color:var(--dsw-alias-state-success-primary)}._1HT81q_delCount{color:var(--dsw-alias-state-error-primary)}._1HT81q_action{color:var(--dsw-alias-label-tertiary)}._1HT81q_panel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:8px;width:min(720px,100%);margin-top:6px;padding:6px}";
+		const tagId = "@deepseek-ai/dsh-client-ui-change-monitor/ChangesRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@dsh-custom/dsh-client-ui-change-monitor";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-change-monitor";
 			tag.dataset.pluginCss = tagId;
 			tag.textContent = css;
 			document.head.appendChild(tag);
 		}
 		var ChangesRow_module_css_default = {
-			"addCount": "BHSpvq_addCount",
-			"delCount": "BHSpvq_delCount",
-			"trigger": "BHSpvq_trigger",
-			"files": "BHSpvq_files",
-			"loading": "BHSpvq_loading",
-			"panel": "BHSpvq_panel",
-			"action": "BHSpvq_action",
-			"counts": "BHSpvq_counts",
-			"root": "BHSpvq_root"
+			"loading": "_1HT81q_loading",
+			"counts": "_1HT81q_counts",
+			"delCount": "_1HT81q_delCount",
+			"files": "_1HT81q_files",
+			"trigger": "_1HT81q_trigger",
+			"noChanges": "_1HT81q_noChanges",
+			"addCount": "_1HT81q_addCount",
+			"action": "_1HT81q_action",
+			"root": "_1HT81q_root",
+			"panel": "_1HT81q_panel"
 		};
 		//#endregion
 		//#region src/client/ChangesRow.tsx
@@ -4861,7 +4862,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					children: t("history.loading")
 				})
 			});
-			if (summary === null || summary.files.length === 0) return null;
+			if (summary === null || summary.files.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: ChangesRow_module_css_default.root,
+				"data-changes-row": true,
+				"data-changes-none": true,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ChangesRow_module_css_default.noChanges,
+					children: t("row.noChanges")
+				})
+			});
 			const filesLabel = summary.files.length === 1 ? t("summary.files.one") : t("summary.files", { count: String(summary.files.length) });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ChangesRow_module_css_default.root,
@@ -4923,6 +4932,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"status.deleted": "D",
 			"binary.summary": "Binary file changed",
 			"history.loading": "Computing changes…",
+			"row.noChanges": "No file changes in this workspace",
 			"diff.copy": "Copy diff",
 			"diff.copied": "Copied",
 			"diff.skipped": "⋯ {count} lines skipped"
@@ -4940,6 +4950,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"status.deleted": "D",
 			"binary.summary": "二进制文件已更改",
 			"history.loading": "正在计算更改…",
+			"row.noChanges": "当前目录下没有文件更改",
 			"diff.copy": "复制 Diff",
 			"diff.copied": "已复制",
 			"diff.skipped": "⋯ 此处省略 {count} 行"

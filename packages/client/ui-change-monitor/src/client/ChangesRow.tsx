@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import type { ChangeSetSummary } from '@dsh-custom/dsh-change-monitor'
+import type { ChangeSetSummary } from '@deepseek-ai/dsh-change-monitor'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { ChangesPanel } from './ChangesPanel.tsx'
@@ -54,7 +54,16 @@ export function ChangesRow({ matched, controller, t }: ChangesRowProps) {
       </div>
     )
   }
-  if (summary === null || summary.files.length === 0) return null
+  if (summary === null || summary.files.length === 0) {
+    // The settle finished and found nothing: show a quiet confirmation so a
+    // turn with no workspace edits reads as "checked, nothing changed"
+    // instead of an empty gap that looks like the plugin never fired.
+    return (
+      <div className={css.root} data-changes-row data-changes-none>
+        <div className={css.noChanges}>{t('row.noChanges')}</div>
+      </div>
+    )
+  }
 
   const filesLabel = summary.files.length === 1
     ? t('summary.files.one')

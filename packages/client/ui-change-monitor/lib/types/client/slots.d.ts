@@ -1,6 +1,6 @@
 /**
  * Inject face shared by the turn-tail row and the history action.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 import type { ChangeMonitorController } from './controller.ts';
 /** Registration-side injected face: a controller getter for the session. */

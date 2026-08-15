@@ -1,6 +1,6 @@
 /**
- * Package-owned invariant companion for `@dsh-custom/dsh-client-ui-change-monitor`.
- * @module @dsh-custom/dsh-client-ui-change-monitor/invariant
+ * Package-owned invariant companion for `@deepseek-ai/dsh-client-ui-change-monitor`.
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/invariant
  */
 import type { Context } from '@deepseek-ai/cordis';
 /** Cordis companion plugin name. */
