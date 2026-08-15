@@ -7,6 +7,7 @@ so both can coexist). No dsh source is included in this folder.
 - `packages/change-monitor`            `@dsh-custom/dsh-change-monitor`           (host service)
 - `packages/client/ui-change-monitor`  `@dsh-custom/dsh-client-ui-change-monitor` (browser changes panel)
 - `packages/client/ui-voice-input`     `@dsh-custom/dsh-client-ui-voice-input`    (composer mic)
+- `packages/client/ui-background`      `@dsh-custom/dsh-client-ui-background`     (custom chat background)
 
 ## Install (one command)
 

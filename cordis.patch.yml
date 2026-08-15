@@ -12,3 +12,6 @@
 
     - id: ui-voice-input
       name: '@dsh-custom/dsh-client-ui-voice-input'
+
+    - id: ui-background
+      name: '@dsh-custom/dsh-client-ui-background'

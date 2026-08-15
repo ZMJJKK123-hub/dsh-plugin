@@ -26,6 +26,7 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-change-monitor': 'workspace:*',
   '@dsh-custom/dsh-client-ui-change-monitor': 'workspace:*',
   '@dsh-custom/dsh-client-ui-voice-input': 'workspace:*',
+  '@dsh-custom/dsh-client-ui-background': 'workspace:*',
 }
 
 const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join('/')} (@dsh-custom/*): the web-app
@@ -129,6 +130,12 @@ function wireTsconfigs(srcRoot) {
     'packages/client/ui-slots', 'packages/typert/protocol',
     'packages/runtime-diagnostics/invariants',
   ]
+  const backgroundRefs = [
+    'vendor/cordis',
+    'packages/client/locale', 'packages/client/runtime',
+    'packages/client/ui-settings', 'packages/client/ui-slots',
+    'packages/runtime-diagnostics/invariants',
+  ]
   const specs = [
     {
       dir: join(PLUGINS_ROOT, 'packages/change-monitor'),
@@ -145,6 +152,11 @@ function wireTsconfigs(srcRoot) {
       dir: join(PLUGINS_ROOT, 'packages/client/ui-voice-input'),
       extends: baseClient,
       refs: clientRefs,
+    },
+    {
+      dir: join(PLUGINS_ROOT, 'packages/client/ui-background'),
+      extends: baseClient,
+      refs: backgroundRefs,
     },
   ]
   for (const spec of specs) {
@@ -174,16 +186,15 @@ function wireTsconfigs(srcRoot) {
     console.log(`  ${file}: rewrote paths`)
   }
   // tsdown configs import the checkout's shared client preset.
-  for (const pkg of ['packages/client/ui-change-monitor', 'packages/client/ui-voice-input']) {
+  for (const pkg of ['packages/client/ui-change-monitor', 'packages/client/ui-voice-input', 'packages/client/ui-background']) {
     const file = join(PLUGINS_ROOT, pkg, 'tsdown.config.ts')
     const preset = slash(join(srcRoot, 'packages/client/tsdown.client.ts'))
-    const id = pkg === 'packages/client/ui-change-monitor'
-      ? '@dsh-custom/dsh-client-ui-change-monitor'
-      : '@dsh-custom/dsh-client-ui-voice-input'
-    const entries = pkg === 'packages/client/ui-change-monitor'
-      ? "['lib/types/index.js', 'lib/types/invariant.js']"
-      : "['lib/types/index.js', 'lib/types/invariant.js']"
-    const text = `import { clientBundle } from '${relFrom(dirname(file), preset)}'\n\nexport default clientBundle('${id}', ${entries})\n`
+    const id = {
+      'packages/client/ui-change-monitor': '@dsh-custom/dsh-client-ui-change-monitor',
+      'packages/client/ui-voice-input': '@dsh-custom/dsh-client-ui-voice-input',
+      'packages/client/ui-background': '@dsh-custom/dsh-client-ui-background',
+    }[pkg]
+    const text = `import { clientBundle } from '${relFrom(dirname(file), preset)}'\n\nexport default clientBundle('${id}', ['lib/types/index.js', 'lib/types/invariant.js'])\n`
     if (readFileSync(file, 'utf8') === text) {
       console.log(`  ${file}: already correct`)
       continue
