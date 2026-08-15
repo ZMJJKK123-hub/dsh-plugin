@@ -62,6 +62,15 @@ pnpm --filter @dsh-custom/dsh-client-ui-change-monitor bundle
 pnpm --filter @dsh-custom/dsh-client-ui-voice-input bundle
 ```
 
+> **HARD RULE when syncing from the in-tree copy**: rebuild the standalone
+> package with ITS OWN tsdown.config.ts (the one install.mjs rewrote, whose
+> `clientBundle` id is `@dsh-custom/*`). NEVER copy the in-tree
+> `lib/client.js` over, and never build it with the in-tree package's tsdown
+> config — the bundle's `__ModuleLoader__.load({ id: ... })` banner would
+> register the old `@deepseek-ai/*` id and the browser throws "loaded
+> without registering". After any rebuild, verify the banner:
+> `Select-String lib/client.js -Pattern 'id: "@dsh-custom'`.
+
 The host service runs from `src` under the source-run dsh (tsx), so host
 edits take effect on server restart; browser edits need the bundle rebuilt
 and the page refreshed.
