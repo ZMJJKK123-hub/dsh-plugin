@@ -1,6 +1,6 @@
 /**
  * Dictionary namespace of the changes panel.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 export declare const NS = "changeMonitor";
 /** Dictionary keys owned by this plugin. */

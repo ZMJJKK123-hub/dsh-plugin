@@ -80,8 +80,8 @@ describe('ChangeMonitorController', () => {
     const remote = fakeRemote({ turn })
     const controller = new ChangeMonitorController(remote, SESSION)
     const pending = controller.summaryFor(1)
-    // Fast phase: 40 × 250ms, then slow phase: 60 × 2000ms.
-    await vi.advanceTimersByTimeAsync(250 * 41 + 2000 * 61)
+    // Fast phase: 40 × 250ms, then slow phase: 240 × 2000ms.
+    await vi.advanceTimersByTimeAsync(250 * 41 + 2000 * 241)
     expect(await pending).toBeNull()
   })
 

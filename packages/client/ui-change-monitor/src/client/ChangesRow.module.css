@@ -6,6 +6,13 @@
   justify-items: start;
 }
 
+.loading {
+  padding: 3px 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+  line-height: 22px;
+}
+
 .trigger {
   display: inline-flex;
   align-items: center;

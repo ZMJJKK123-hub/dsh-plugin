@@ -270,6 +270,7 @@ export async function scanMetadata(
     } catch {
       continue
     }
+    const fileTasks: Array<{ dir: string; entry: string; relPath: string }> = []
     for (const entry of entries) {
       const relPath = rel === '' ? entry.name : `${rel}/${entry.name}`
       if (entry.isDirectory()) {
@@ -279,11 +280,19 @@ export async function scanMetadata(
         continue
       }
       if (ignore.isIgnored(relPath, false)) continue
-      try {
-        const info = await stat(join(dir, entry.name))
-        if (info.isFile()) tokens.set(relPath, { size: info.size, mtimeNs: mtimeNs(info) })
-      } catch {
-        // Vanishing or unreadable file: absent from the token map.
+      fileTasks.push({ dir, entry: entry.name, relPath })
+    }
+    // The settle check must be cheap even on huge trees; stat the files of
+    // one directory with bounded concurrency like the snapshot walker.
+    for (let offset = 0; offset < fileTasks.length; offset += FILE_CONCURRENCY) {
+      const batch = fileTasks.slice(offset, offset + FILE_CONCURRENCY)
+      const infos = await Promise.all(batch.map(task => stat(join(task.dir, task.entry)).catch(() => undefined)))
+      for (let index = 0; index < batch.length; index += 1) {
+        const task = batch[index]
+        const info = infos[index]
+        if (task !== undefined && info?.isFile()) {
+          tokens.set(task.relPath, { size: info.size, mtimeNs: mtimeNs(info) })
+        }
       }
     }
   }

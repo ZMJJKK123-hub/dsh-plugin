@@ -19,7 +19,9 @@ export type ChangesRowProps = Pick<TurnTailOwnerProps, 'turn'> & {
 /**
  * One turn's changes summary line with an expandable panel.
  * @param props - matched turn, locale seat, and the injected controller.
- * @returns the row, or null while loading / when the turn changed nothing.
+ * @returns the row: a "computing changes" placeholder while the Host
+ * settles, the summary line when files changed, or null when the turn
+ * changed nothing (or the poll budget ran out).
  */
 export declare function ChangesRow({ matched, controller, t }: ChangesRowProps): import("react").JSX.Element | null;
 //# sourceMappingURL=ChangesRow.d.ts.map

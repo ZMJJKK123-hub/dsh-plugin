@@ -3,7 +3,7 @@
  * over the changeMonitor Remote with small caches and a bounded poll for the
  * turn whose record the Host may still be settling. Every failure degrades
  * to "no changes" — the panel is decoration, never an error surface.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client';
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';

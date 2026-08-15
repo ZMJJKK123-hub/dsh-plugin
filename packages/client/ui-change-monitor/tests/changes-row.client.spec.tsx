@@ -41,10 +41,10 @@ function props(controller: ChangeMonitorController, turn = 3): ChangesRowProps {
 }
 
 describe('ChangesRow', () => {
-  it('renders nothing while the summary loads', () => {
+  it('shows a computing placeholder while the summary loads', () => {
     const controller = { summaryFor: vi.fn(() => new Promise(() => undefined)) } as unknown as ChangeMonitorController
-    const { container } = render(<ChangesRow {...props(controller)} />)
-    expect(container.innerHTML).toBe('')
+    render(<ChangesRow {...props(controller)} />)
+    expect(screen.getByText('正在计算更改…')).toBeDefined()
   })
 
   it('renders nothing when the turn changed no files', async () => {

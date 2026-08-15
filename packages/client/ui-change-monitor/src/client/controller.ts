@@ -3,7 +3,7 @@
  * over the changeMonitor Remote with small caches and a bounded poll for the
  * turn whose record the Host may still be settling. Every failure degrades
  * to "no changes" — the panel is decoration, never an error surface.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -26,12 +26,13 @@ export interface ChangeMonitorRemote {
 /**
  * How long one summary poll keeps trying while the Host settles the turn.
  * A fast phase covers the common sub-second settle; a slow phase then keeps
- * waiting for large workspaces whose snapshots take tens of seconds. The
- * budget is bounded so a dead record degrades to "no changes" eventually.
+ * waiting for large workspaces whose snapshots take minutes (a big tree can
+ * need several full scans before the diff lands). The budget is bounded so a
+ * dead record degrades to "no changes" eventually.
  */
 const POLL_FAST_ATTEMPTS = 40
 const POLL_FAST_INTERVAL_MS = 250
-const POLL_SLOW_ATTEMPTS = 60
+const POLL_SLOW_ATTEMPTS = 240
 const POLL_SLOW_INTERVAL_MS = 2000
 
 /** Wait between poll attempts. */

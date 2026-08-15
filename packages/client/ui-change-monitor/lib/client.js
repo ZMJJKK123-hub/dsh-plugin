@@ -4380,8 +4380,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		/**
 		* How long one summary poll keeps trying while the Host settles the turn.
 		* A fast phase covers the common sub-second settle; a slow phase then keeps
-		* waiting for large workspaces whose snapshots take tens of seconds. The
-		* budget is bounded so a dead record degrades to "no changes" eventually.
+		* waiting for large workspaces whose snapshots take minutes (a big tree can
+		* need several full scans before the diff lands). The budget is bounded so a
+		* dead record degrades to "no changes" eventually.
 		*/
 		const POLL_FAST_ATTEMPTS = 40;
 		const POLL_FAST_INTERVAL_MS = 250;
@@ -4426,7 +4427,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				});
 			}
 			async pollSummary(turn) {
-				const attempts = 100;
+				const attempts = 280;
 				for (let attempt = 0; attempt < attempts; attempt += 1) {
 					const carried = await this.remote.turn({
 						sessionId: this.sessionId,
@@ -4488,28 +4489,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var DiffViewer_module_css_default = {
-			"lineDel": "_3xq3Zq_lineDel",
-			"sign": "_3xq3Zq_sign",
-			"skipped": "_3xq3Zq_skipped",
-			"modified": "_3xq3Zq_modified",
-			"counts": "_3xq3Zq_counts",
-			"addCount": "_3xq3Zq_addCount",
-			"binary": "_3xq3Zq_binary",
-			"text": "_3xq3Zq_text",
-			"added": "_3xq3Zq_added",
-			"body": "_3xq3Zq_body",
-			"root": "_3xq3Zq_root",
-			"path": "_3xq3Zq_path",
-			"status": "_3xq3Zq_status",
-			"oldNo": "_3xq3Zq_oldNo",
-			"newNo": "_3xq3Zq_newNo",
-			"lineAdd": "_3xq3Zq_lineAdd",
 			"lineContext": "_3xq3Zq_lineContext",
-			"line": "_3xq3Zq_line",
-			"deleted": "_3xq3Zq_deleted",
 			"copy": "_3xq3Zq_copy",
+			"body": "_3xq3Zq_body",
+			"header": "_3xq3Zq_header",
+			"newNo": "_3xq3Zq_newNo",
+			"added": "_3xq3Zq_added",
+			"skipped": "_3xq3Zq_skipped",
+			"counts": "_3xq3Zq_counts",
+			"status": "_3xq3Zq_status",
+			"binary": "_3xq3Zq_binary",
+			"root": "_3xq3Zq_root",
+			"deleted": "_3xq3Zq_deleted",
+			"addCount": "_3xq3Zq_addCount",
+			"path": "_3xq3Zq_path",
+			"sign": "_3xq3Zq_sign",
+			"modified": "_3xq3Zq_modified",
+			"text": "_3xq3Zq_text",
+			"oldNo": "_3xq3Zq_oldNo",
+			"lineDel": "_3xq3Zq_lineDel",
 			"delCount": "_3xq3Zq_delCount",
-			"header": "_3xq3Zq_header"
+			"lineAdd": "_3xq3Zq_lineAdd",
+			"line": "_3xq3Zq_line"
 		};
 		/**
 		* Fold one hunk's lines: a run of consecutive context lines longer than
@@ -4713,20 +4714,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var ChangesPanel_module_css_default = {
-			"row": "l2-mUa_row",
-			"addCount": "l2-mUa_addCount",
-			"loading": "l2-mUa_loading",
-			"counts": "l2-mUa_counts",
-			"added": "l2-mUa_added",
-			"list": "l2-mUa_list",
 			"deleted": "l2-mUa_deleted",
-			"path": "l2-mUa_path",
-			"delCount": "l2-mUa_delCount",
+			"status": "l2-mUa_status",
 			"modified": "l2-mUa_modified",
 			"diff": "l2-mUa_diff",
+			"loading": "l2-mUa_loading",
+			"list": "l2-mUa_list",
+			"added": "l2-mUa_added",
+			"rowSelected": "l2-mUa_rowSelected",
+			"addCount": "l2-mUa_addCount",
+			"row": "l2-mUa_row",
 			"root": "l2-mUa_root",
-			"status": "l2-mUa_status",
-			"rowSelected": "l2-mUa_rowSelected"
+			"path": "l2-mUa_path",
+			"counts": "l2-mUa_counts",
+			"delCount": "l2-mUa_delCount"
 		};
 		//#endregion
 		//#region src/client/ChangesPanel.tsx
@@ -4803,7 +4804,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		//#endregion
 		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\ChangesRow.module.css.mjs
-		const css = ".BHSpvq_root{justify-items:start;margin-top:14px;display:grid}.BHSpvq_trigger{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:14px;align-items:center;gap:10px;padding:3px 10px;font-size:12.5px;line-height:22px;display:inline-flex}.BHSpvq_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.BHSpvq_files{font-weight:600}.BHSpvq_counts{gap:6px;display:inline-flex}.BHSpvq_addCount{color:var(--dsw-alias-state-success-primary)}.BHSpvq_delCount{color:var(--dsw-alias-state-error-primary)}.BHSpvq_action{color:var(--dsw-alias-label-tertiary)}.BHSpvq_panel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:8px;width:min(720px,100%);margin-top:6px;padding:6px}";
+		const css = ".BHSpvq_root{justify-items:start;margin-top:14px;display:grid}.BHSpvq_loading{color:var(--dsw-alias-label-tertiary);padding:3px 10px;font-size:12.5px;line-height:22px}.BHSpvq_trigger{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:14px;align-items:center;gap:10px;padding:3px 10px;font-size:12.5px;line-height:22px;display:inline-flex}.BHSpvq_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.BHSpvq_files{font-weight:600}.BHSpvq_counts{gap:6px;display:inline-flex}.BHSpvq_addCount{color:var(--dsw-alias-state-success-primary)}.BHSpvq_delCount{color:var(--dsw-alias-state-error-primary)}.BHSpvq_action{color:var(--dsw-alias-label-tertiary)}.BHSpvq_panel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:8px;width:min(720px,100%);margin-top:6px;padding:6px}";
 		const tagId = "@dsh-custom/dsh-client-ui-change-monitor/ChangesRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4815,12 +4816,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		var ChangesRow_module_css_default = {
 			"addCount": "BHSpvq_addCount",
 			"delCount": "BHSpvq_delCount",
+			"trigger": "BHSpvq_trigger",
 			"files": "BHSpvq_files",
-			"counts": "BHSpvq_counts",
+			"loading": "BHSpvq_loading",
 			"panel": "BHSpvq_panel",
-			"root": "BHSpvq_root",
 			"action": "BHSpvq_action",
-			"trigger": "BHSpvq_trigger"
+			"counts": "BHSpvq_counts",
+			"root": "BHSpvq_root"
 		};
 		//#endregion
 		//#region src/client/ChangesRow.tsx
@@ -4833,7 +4835,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		/**
 		* One turn's changes summary line with an expandable panel.
 		* @param props - matched turn, locale seat, and the injected controller.
-		* @returns the row, or null while loading / when the turn changed nothing.
+		* @returns the row: a "computing changes" placeholder while the Host
+		* settles, the summary line when files changed, or null when the turn
+		* changed nothing (or the poll budget ran out).
 		*/
 		function ChangesRow({ matched, controller, t }) {
 			const [summary, setSummary] = (0, react.useState)(void 0);
@@ -4848,7 +4852,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					cancelled = true;
 				};
 			}, [controller, matched.turn]);
-			if (summary === void 0) return null;
+			if (summary === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: ChangesRow_module_css_default.root,
+				"data-changes-row": true,
+				"data-changes-loading": true,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ChangesRow_module_css_default.loading,
+					children: t("history.loading")
+				})
+			});
 			if (summary === null || summary.files.length === 0) return null;
 			const filesLabel = summary.files.length === 1 ? t("summary.files.one") : t("summary.files", { count: String(summary.files.length) });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4895,7 +4907,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		//#region src/client/locales.ts
 		/**
 		* Dictionary namespace of the changes panel.
-		* @module @dsh-custom/dsh-client-ui-change-monitor/client
+		* @module @deepseek-ai/dsh-client-ui-change-monitor/client
 		*/
 		const NS = "changeMonitor";
 		/** English copy. */
@@ -4910,7 +4922,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"status.added": "A",
 			"status.deleted": "D",
 			"binary.summary": "Binary file changed",
-			"history.loading": "Loading changes…",
+			"history.loading": "Computing changes…",
 			"diff.copy": "Copy diff",
 			"diff.copied": "Copied",
 			"diff.skipped": "⋯ {count} lines skipped"
@@ -4927,7 +4939,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"status.added": "A",
 			"status.deleted": "D",
 			"binary.summary": "二进制文件已更改",
-			"history.loading": "正在加载更改…",
+			"history.loading": "正在计算更改…",
 			"diff.copy": "复制 Diff",
 			"diff.copied": "已复制",
 			"diff.skipped": "⋯ 此处省略 {count} 行"

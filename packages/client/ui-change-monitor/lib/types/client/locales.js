@@ -1,6 +1,6 @@
 /**
  * Dictionary namespace of the changes panel.
- * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ * @module @deepseek-ai/dsh-client-ui-change-monitor/client
  */
 export const NS = 'changeMonitor';
 /** English copy. */
@@ -15,7 +15,7 @@ export const en = {
     'status.added': 'A',
     'status.deleted': 'D',
     'binary.summary': 'Binary file changed',
-    'history.loading': 'Loading changes…',
+    'history.loading': 'Computing changes…',
     'diff.copy': 'Copy diff',
     'diff.copied': 'Copied',
     'diff.skipped': '⋯ {count} lines skipped',
@@ -32,7 +32,7 @@ export const zh = {
     'status.added': 'A',
     'status.deleted': 'D',
     'binary.summary': '二进制文件已更改',
-    'history.loading': '正在加载更改…',
+    'history.loading': '正在计算更改…',
     'diff.copy': '复制 Diff',
     'diff.copied': '已复制',
     'diff.skipped': '⋯ 此处省略 {count} 行',

@@ -3,7 +3,7 @@
  * row and injects the global style that reveals the body background image by
  * making the page-level surfaces transparent while `data-dsh-bg` is set.
  * Everything runs in the browser — localStorage persistence, no Host state.
- * @module @deepseek-ai/dsh-client-ui-background/client
+ * @module @dsh-custom/dsh-client-ui-background/client
  */
 import { applyBackground, BACKGROUND_STYLE_ID, clearAppliedBackground, loadBackground } from "./background.js";
 import { BackgroundRow } from "./BackgroundRow.js";

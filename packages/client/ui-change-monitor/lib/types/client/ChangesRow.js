@@ -11,7 +11,9 @@ import css from './ChangesRow.module.css';
 /**
  * One turn's changes summary line with an expandable panel.
  * @param props - matched turn, locale seat, and the injected controller.
- * @returns the row, or null while loading / when the turn changed nothing.
+ * @returns the row: a "computing changes" placeholder while the Host
+ * settles, the summary line when files changed, or null when the turn
+ * changed nothing (or the poll budget ran out).
  */
 export function ChangesRow({ matched, controller, t }) {
     const [summary, setSummary] = useState(undefined);
@@ -25,8 +27,11 @@ export function ChangesRow({ matched, controller, t }) {
         });
         return () => { cancelled = true; };
     }, [controller, matched.turn]);
-    if (summary === undefined)
-        return null;
+    if (summary === undefined) {
+        // The Host may still be settling (big workspaces take minutes); keep a
+        // visible placeholder so the row reads as "working", not "missing".
+        return (_jsx("div", { className: css.root, "data-changes-row": true, "data-changes-loading": true, children: _jsx("div", { className: css.loading, children: t('history.loading') }) }));
+    }
     if (summary === null || summary.files.length === 0)
         return null;
     const filesLabel = summary.files.length === 1

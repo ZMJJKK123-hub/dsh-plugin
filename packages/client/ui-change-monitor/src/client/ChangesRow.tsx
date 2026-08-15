@@ -28,7 +28,9 @@ export type ChangesRowProps =
 /**
  * One turn's changes summary line with an expandable panel.
  * @param props - matched turn, locale seat, and the injected controller.
- * @returns the row, or null while loading / when the turn changed nothing.
+ * @returns the row: a "computing changes" placeholder while the Host
+ * settles, the summary line when files changed, or null when the turn
+ * changed nothing (or the poll budget ran out).
  */
 export function ChangesRow({ matched, controller, t }: ChangesRowProps) {
   const [summary, setSummary] = useState<ChangeSetSummary | null | undefined>(undefined)
@@ -43,7 +45,15 @@ export function ChangesRow({ matched, controller, t }: ChangesRowProps) {
     return () => { cancelled = true }
   }, [controller, matched.turn])
 
-  if (summary === undefined) return null
+  if (summary === undefined) {
+    // The Host may still be settling (big workspaces take minutes); keep a
+    // visible placeholder so the row reads as "working", not "missing".
+    return (
+      <div className={css.root} data-changes-row data-changes-loading>
+        <div className={css.loading}>{t('history.loading')}</div>
+      </div>
+    )
+  }
   if (summary === null || summary.files.length === 0) return null
 
   const filesLabel = summary.files.length === 1
