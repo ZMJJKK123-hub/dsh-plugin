@@ -15,7 +15,7 @@
  * After install: run `pnpm install` in the checkout, restart dsh web, and
  * refresh the browser.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -222,7 +222,11 @@ function wireProfilePatch() {
     : join(homedir(), '.dsh')
   const file = join(home, 'profiles', 'web', 'cordis.patch.yml')
   if (!existsSync(file)) {
-    console.log(`  profile patch: ${file} missing — create it with the contents from cordis.patch.yml in this folder`)
+    // The profile may not exist yet (fresh checkout, never booted). Create
+    // the patch so the first boot picks the plugins up right away.
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, PROFILE_PATCH, 'utf8')
+    console.log(`  profile patch: created ${file}`)
     return
   }
   const text = readFileSync(file, 'utf8')
