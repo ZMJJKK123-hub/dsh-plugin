@@ -1,0 +1,59 @@
+/**
+ * Dictionary namespace of the changes panel.
+ * @module @dsh-custom/dsh-client-ui-change-monitor/client
+ */
+
+export const NS = 'changeMonitor'
+
+/** Dictionary keys owned by this plugin. */
+export type ChangeMonitorKey =
+  | 'summary.files'
+  | 'summary.files.one'
+  | 'summary.additions'
+  | 'summary.deletions'
+  | 'row.view'
+  | 'row.hide'
+  | 'status.modified'
+  | 'status.added'
+  | 'status.deleted'
+  | 'binary.summary'
+  | 'history.loading'
+  | 'diff.copy'
+  | 'diff.copied'
+  | 'diff.skipped'
+
+/** English copy. */
+export const en: Record<ChangeMonitorKey, string> = {
+  'summary.files': '{count} files changed',
+  'summary.files.one': '1 file changed',
+  'summary.additions': '+{count}',
+  'summary.deletions': '−{count}',
+  'row.view': 'View changes',
+  'row.hide': 'Hide changes',
+  'status.modified': 'M',
+  'status.added': 'A',
+  'status.deleted': 'D',
+  'binary.summary': 'Binary file changed',
+  'history.loading': 'Loading changes…',
+  'diff.copy': 'Copy diff',
+  'diff.copied': 'Copied',
+  'diff.skipped': '⋯ {count} lines skipped',
+}
+
+/** Chinese copy. */
+export const zh: Record<ChangeMonitorKey, string> = {
+  'summary.files': '{count} 个文件被修改',
+  'summary.files.one': '1 个文件被修改',
+  'summary.additions': '+{count}',
+  'summary.deletions': '−{count}',
+  'row.view': '查看更改',
+  'row.hide': '收起更改',
+  'status.modified': 'M',
+  'status.added': 'A',
+  'status.deleted': 'D',
+  'binary.summary': '二进制文件已更改',
+  'history.loading': '正在加载更改…',
+  'diff.copy': '复制 Diff',
+  'diff.copied': '已复制',
+  'diff.skipped': '⋯ 此处省略 {count} 行',
+}

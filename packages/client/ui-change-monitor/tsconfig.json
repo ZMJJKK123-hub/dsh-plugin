@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../myself-deepseek-harness/tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../myself-deepseek-harness/vendor/cordis"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/client/locale"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/client/runtime"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/client/ui-conversation"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/client/ui-primitives"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/client/ui-slots"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/typert/protocol"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness/packages/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../change-monitor"
+    }
+  ]
+}

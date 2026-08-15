@@ -1,0 +1,273 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
+import { SessionId, SessionStore } from '@deepseek-ai/dsh-session'
+import { ChangeMonitorService, type Config } from '../src/index.ts'
+
+let workspace: string
+let storeRoot: string
+let ctx: Context
+let monitor: ChangeMonitorService
+
+const BASE_CONFIG: Config = {
+  settleDelayMs: 0,
+  settleMaxAttempts: 1,
+  maxHistory: 10,
+}
+
+beforeEach(async () => {
+  vi.setConfig({ testTimeout: 20_000 })
+  workspace = await mkdtemp(join(tmpdir(), 'dsh-change-workspace-'))
+  storeRoot = await mkdtemp(join(tmpdir(), 'dsh-change-store-'))
+  ctx = new Context()
+  await ctx.plugin(SessionStore)
+  await ctx.plugin(ChangeMonitorService, { ...BASE_CONFIG, storeRoot })
+  // The service was just mounted by the plugin call above; absence is a test bug.
+  monitor = ctx.get('changeMonitor')!
+})
+
+afterEach(async () => {
+  await rm(workspace, { recursive: true, force: true })
+  await rm(storeRoot, { recursive: true, force: true })
+  await ctx.fiber.dispose().catch(() => undefined)
+})
+
+/** Wait until a probe returns a value, failing the test after the deadline. */
+async function waitFor<T>(probe: () => Promise<T | undefined>, label: string): Promise<T> {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const value = await probe()
+    if (value !== undefined) return value
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+  throw new Error(`timed out waiting for ${label}`)
+}
+
+/** A live session rooted at the workspace. */
+function createSession(): { id: SessionId; events: (type: 'turn/start' | 'turn/end', turn: number) => Promise<void> } {
+  const session = ctx.sessions.create(undefined, { meta: { cwd: workspace } })
+  return {
+    id: session.id,
+    // Awaiting after turn/start lets the asynchronous before snapshot land
+    // before the test mutates the workspace (mirrors the real loop, where a
+    // model round trip separates the two).
+    events: async (type, turn) => {
+      if (type === 'turn/start') {
+        session.append('turn/start', { turn })
+        await new Promise(resolve => setTimeout(resolve, 120))
+      } else {
+        session.append('turn/end', { turn, reason: { kind: 'completed' } })
+      }
+    },
+  }
+}
+
+describe('ChangeMonitorService lifecycle', () => {
+  it('records one change set for a turn that modifies, adds, and deletes', async () => {
+    await writeFile(join(workspace, 'keep.txt'), 'one\n', 'utf8')
+    await writeFile(join(workspace, 'gone.txt'), 'bye\n', 'utf8')
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'keep.txt'), 'two\n', 'utf8')
+    await writeFile(join(workspace, 'new.txt'), 'fresh\n', 'utf8')
+    await rm(join(workspace, 'gone.txt'))
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.current({ sessionId: id })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 change set')
+
+    expect(summary.files.length).toBe(3)
+    const keep = summary.files.find(file => file.path === 'keep.txt')
+    expect(keep?.status).toBe('modified')
+    expect(keep?.additions).toBe(1)
+    expect(keep?.deletions).toBe(1)
+    const fresh = summary.files.find(file => file.path === 'new.txt')
+    expect(fresh?.status).toBe('added')
+    expect(fresh?.additions).toBe(1)
+    const gone = summary.files.find(file => file.path === 'gone.txt')
+    expect(gone?.status).toBe('deleted')
+    expect(gone?.deletions).toBe(1)
+  })
+
+  it('reports a rewrite-to-original as no change', async () => {
+    const path = join(workspace, 'same.txt')
+    await writeFile(path, 'same\n', 'utf8')
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(path, 'same\n', 'utf8')
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.current({ sessionId: id })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 1 empty change set')
+    expect(summary.files).toEqual([])
+  })
+
+  it('produces one independent change set per turn', async () => {
+    await writeFile(join(workspace, 'a.txt'), 'a1\n', 'utf8')
+    await writeFile(join(workspace, 'b.txt'), 'b1\n', 'utf8')
+    const { id, events } = createSession()
+
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'a.txt'), 'a2\n', 'utf8')
+    await events('turn/end', 1)
+    await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 1 record')
+
+    await events('turn/start', 2)
+    await writeFile(join(workspace, 'b.txt'), 'b2\n', 'utf8')
+    await events('turn/end', 2)
+    const second = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 2 })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 2 record')
+
+    expect(second.files.map(file => file.path)).toEqual(['b.txt'])
+
+    const turns = await waitFor(async () => {
+      const result = await monitor.turns({ sessionId: id })
+      return result.ok && result.value.length === 2 ? result.value : undefined
+    }, 'two-turn history')
+    expect(turns[0]?.turn).toBe(2)
+    expect(turns[1]?.turn).toBe(1)
+  })
+
+  it('serves a full file diff with hunks through the file endpoint', async () => {
+    await writeFile(join(workspace, 'code.ts'), 'const a = 1\nconst b = 2\n', 'utf8')
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'code.ts'), 'const a = 1\nconst b = 3\n', 'utf8')
+    await events('turn/end', 1)
+    await waitFor(async () => {
+      const result = await monitor.current({ sessionId: id })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 file list')
+
+    const file = await monitor.file({ sessionId: id, turn: 1, path: 'code.ts' })
+    expect(file.ok).toBe(true)
+    if (!file.ok) return
+    expect(file.value.hunks.length).toBeGreaterThan(0)
+    const hunk = file.value.hunks[0]
+    expect(hunk?.lines.some(line => line.kind === 'del' && line.text === 'const b = 2')).toBe(true)
+    expect(hunk?.lines.some(line => line.kind === 'add' && line.text === 'const b = 3')).toBe(true)
+
+    const traversal = await monitor.file({ sessionId: id, turn: 1, path: '../escape.txt' })
+    expect(traversal.ok).toBe(false)
+    if (!traversal.ok) expect(traversal.error.code).toBe('not-found')
+  })
+
+  it('merges retained turns into the session-level summary', async () => {
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'x.txt'), 'v1\n', 'utf8')
+    await events('turn/end', 1)
+    await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 1 added')
+
+    await events('turn/start', 2)
+    await writeFile(join(workspace, 'x.txt'), 'v2\n', 'utf8')
+    await events('turn/end', 2)
+    await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 2 })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 2 modified')
+
+    const merged = await monitor.session({ sessionId: id })
+    expect(merged.ok).toBe(true)
+    if (!merged.ok) return
+    // The file did not exist when the session started, so the cumulative view
+    // reports it as added (from absence to its final content).
+    expect(merged.value?.files.length).toBe(1)
+    expect(merged.value?.files[0]?.status).toBe('added')
+    expect(merged.value?.files[0]?.additions).toBe(1)
+    expect(merged.value?.files[0]?.deletions).toBe(0)
+  })
+
+  it('respects configured exclusions', async () => {
+    await writeFile(join(workspace, 'noise.tmp'), 'x\n', 'utf8')
+    await writeFile(join(workspace, 'real.ts'), 'x\n', 'utf8')
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'noise.tmp'), 'y\n', 'utf8')
+    await writeFile(join(workspace, 'real.ts'), 'y\n', 'utf8')
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.current({ sessionId: id })
+      return result.ok && result.value !== null ? result.value : undefined
+    }, 'turn 1 with exclusions')
+    expect(summary.files.map(file => file.path)).toEqual(['real.ts'])
+  })
+
+  it('reports binary files with a size-only summary', async () => {
+    const path = join(workspace, 'img.bin')
+    await writeFile(path, Buffer.from([0x00, 0x01, 0x02]))
+    const { id, events } = createSession()
+    await events('turn/start', 1)
+    await writeFile(path, Buffer.from([0x00, 0x01, 0x02, 0x03]))
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.current({ sessionId: id })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'binary change set')
+    const file = summary.files[0]
+    expect(file?.kind).toBe('binary')
+    expect(file?.summary).toBe('Binary file changed')
+    expect(file?.beforeSize).toBe(3)
+    expect(file?.afterSize).toBe(4)
+  })
+
+  it('skips a turn end without a before snapshot instead of failing', async () => {
+    const { id, events } = createSession()
+    await events('turn/end', 99)
+    // Give any (incorrect) settle a chance to run, then assert absence.
+    await new Promise(resolve => setTimeout(resolve, 150))
+    const result = await monitor.current({ sessionId: id })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value).toBeNull()
+  })
+
+  it('trims history to maxHistory turns', async () => {
+    // A dedicated monitor keeps only the two latest turns.
+    const trimmedCtx = new Context()
+    const trimmedStore = await mkdtemp(join(tmpdir(), 'dsh-change-store-trim-'))
+    await trimmedCtx.plugin(SessionStore)
+    await trimmedCtx.plugin(ChangeMonitorService, { ...BASE_CONFIG, maxHistory: 2, storeRoot: trimmedStore })
+    const trimmedMonitor = trimmedCtx.get('changeMonitor')!
+    const session = trimmedCtx.sessions.create(undefined, { meta: { cwd: workspace } })
+    const trimmedEvents = async (type: 'turn/start' | 'turn/end', turn: number): Promise<void> => {
+      if (type === 'turn/start') {
+        session.append('turn/start', { turn })
+        await new Promise(resolve => setTimeout(resolve, 120))
+      } else {
+        session.append('turn/end', { turn, reason: { kind: 'completed' } })
+      }
+    }
+    for (let turn = 1; turn <= 3; turn += 1) {
+      await trimmedEvents('turn/start', turn)
+      await writeFile(join(workspace, `f${turn}.txt`), `v${turn}\n`, 'utf8')
+      await trimmedEvents('turn/end', turn)
+      await waitFor(async () => {
+        const result = await trimmedMonitor.turn({ sessionId: session.id, turn })
+        return result.ok && result.value !== null ? result.value : undefined
+      }, `turn ${turn} record`)
+    }
+    const turns = await waitFor(async () => {
+      const result = await trimmedMonitor.turns({ sessionId: session.id })
+      return result.ok && result.value.length === 2 ? result.value : undefined
+    }, 'trimmed history')
+    expect(turns.map(entry => entry.turn).sort()).toEqual([2, 3])
+    await trimmedCtx.fiber.dispose().catch(() => undefined)
+    await rm(trimmedStore, { recursive: true, force: true })
+  })
+})

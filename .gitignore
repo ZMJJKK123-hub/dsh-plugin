@@ -1,0 +1,10 @@
+# Local install residue
+node_modules/
+*.tsbuildinfo
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

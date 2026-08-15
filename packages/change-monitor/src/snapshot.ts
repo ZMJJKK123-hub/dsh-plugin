@@ -1,0 +1,376 @@
+/**
+ * Workspace snapshotting: a bounded walk of the workspace root recording
+ * per-file metadata (size, mtime, content hash, text/binary/large kind).
+ * The turn-start baseline retains decoded content (the disk is overwritten
+ * by the turn, so only the snapshot can later supply the before text); the
+ * turn-end view keeps metadata and hash only, and the diff engine re-reads
+ * changed files from disk — so the expensive retained-content path runs
+ * once per turn, not twice. A fast metadata-only scan supports the settle
+ * check.
+ *
+ * @module @dsh-custom/dsh-change-monitor
+ */
+
+import { createHash } from 'node:crypto'
+import { lstat, open, readdir, stat } from 'node:fs/promises'
+import { join, sep } from 'node:path'
+import type { CompiledIgnore } from './ignore.ts'
+
+/** How a file is classified for diffing. */
+export type SnapshotFileKind = 'text' | 'binary' | 'large'
+
+/** Immutable per-file snapshot metadata. */
+export interface SnapshotFileMeta {
+  readonly size: number
+  readonly mtimeNs: number
+  /** SHA-256 hex over the file bytes; null for files above the snapshot cap. */
+  readonly hash: string | null
+  readonly kind: SnapshotFileKind
+  /**
+   * Decoded UTF-8 content, retained for text files at or below the snapshot
+   * cap. The diff engine reads ONLY this snapshot content — never the disk —
+   * so a file modified after its snapshot still diffs against what the
+   * snapshot saw. Held transiently for the turn window, then released.
+   */
+  readonly content?: string
+}
+
+/** One point-in-time view of the workspace. */
+export interface WorkspaceSnapshot {
+  readonly root: string
+  readonly time: number
+  readonly files: ReadonlyMap<string, SnapshotFileMeta>
+}
+
+/** Snapshot behavior knobs (monitor config supplies the values). */
+export interface SnapshotOptions {
+  /** Files at or above this byte size get metadata only (no hash). */
+  readonly maxSnapshotFileSize: number
+  /** Compiled ignore set. */
+  readonly ignore: CompiledIgnore
+  /**
+   * Retain decoded UTF-8 content for text files at or below the cap. The
+   * turn-start baseline must retain content (the disk is overwritten by the
+   * turn, so only the snapshot can later supply the before text); the
+   * turn-end view can skip it and the diff reads changed files from disk.
+   * Defaults to true.
+   */
+  readonly retainContent?: boolean
+}
+
+/** NUL bytes in the first probe window mark a file as binary. */
+const BINARY_PROBE_BYTES = 8192
+
+/** Concurrent file reads inside one directory; bounds the open-handle count. */
+const FILE_CONCURRENCY = 16
+
+/**
+ * Snapshot every non-ignored file under `root`. Errors on individual files
+ * (permission, races, encoding) are contained: the walker skips the file and
+ * keeps going, so one unreadable path cannot fail the turn.
+ * @param root - workspace root directory.
+ * @param options - cap, ignore set, and content-retention choice.
+ * @returns the snapshot, whose `files` map is never mutated afterwards.
+ */
+export async function snapshotWorkspace(
+  root: string,
+  options: SnapshotOptions,
+): Promise<WorkspaceSnapshot> {
+  const files = new Map<string, SnapshotFileMeta>()
+  const pending: Array<{ dir: string; rel: string }> = [{ dir: root, rel: '' }]
+  while (pending.length > 0) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- the loop condition guarantees a pending entry
+    const { dir, rel } = pending.pop()!
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      continue // Unreadable directory: skip it, never fail the turn.
+    }
+    const tasks: Array<{ absolute: string; relPath: string }> = []
+    for (const entry of entries) {
+      const relPath = rel === '' ? entry.name : `${rel}/${entry.name}`
+      if (entry.isDirectory()) {
+        if (entry.isSymbolicLink()) continue // Do not follow directory symlinks.
+        if (options.ignore.isIgnored(relPath, true)) continue
+        pending.push({ dir: join(dir, entry.name), rel: relPath })
+        continue
+      }
+      // Regular files and file symlinks (followed through their target's own
+      // metadata by `stat` inside `metaOf`) share one task queue.
+      tasks.push({ absolute: join(dir, entry.name), relPath })
+    }
+    // Read the directory's files with bounded concurrency; `metaOf` is
+    // stat + read + hash, so parallelism matters on large trees while the
+    // open-handle count stays low.
+    for (let offset = 0; offset < tasks.length; offset += FILE_CONCURRENCY) {
+      const batch = tasks.slice(offset, offset + FILE_CONCURRENCY)
+      const metas = await Promise.all(batch.map(task => metaOf(task.absolute, task.relPath, options)))
+      for (let index = 0; index < batch.length; index += 1) {
+        const task = batch[index]
+        const meta = metas[index]
+        if (task !== undefined && meta !== undefined) files.set(task.relPath, meta)
+      }
+    }
+  }
+  return { root, time: Date.now(), files }
+}
+
+/** Snapshot one regular file, or undefined when it vanished or is unreadable. */
+async function metaOf(
+  absolute: string,
+  relPath: string,
+  options: SnapshotOptions,
+): Promise<SnapshotFileMeta | undefined> {
+  if (options.ignore.isIgnored(relPath, false)) return undefined
+  let info
+  try {
+    info = await stat(absolute)
+  } catch {
+    return undefined
+  }
+  if (!info.isFile()) return undefined
+  if (info.size >= options.maxSnapshotFileSize) {
+    return { size: info.size, mtimeNs: mtimeNs(info), hash: null, kind: 'large' }
+  }
+  const probe = options.retainContent === false
+    ? await hashOf(absolute, info.size)
+    : await hashAndContent(absolute, info.size)
+  return {
+    size: info.size,
+    mtimeNs: mtimeNs(info),
+    hash: probe === undefined ? null : probe.hash,
+    kind: probe === undefined ? 'large' : probe.kind,
+    ...(probe?.content === undefined ? {} : { content: probe.content }),
+  }
+}
+
+/** Nanosecond mtime, with the inode fallback for filesystems without one. */
+function mtimeNs(info: { mtimeMs: number; mtimeNs?: number }): number {
+  if (info.mtimeNs !== undefined) return info.mtimeNs
+  return Math.floor(info.mtimeMs * 1e6)
+}
+
+/**
+ * Stream one file once, hashing the full content and detecting binary by NUL
+ * bytes in the probe window, without retaining the bytes — the cheap path for
+ * the turn-end view whose texts are read from disk on demand.
+ * @returns hash and kind, or undefined when the read failed mid-way.
+ */
+async function hashOf(
+  absolute: string,
+  size: number,
+): Promise<{ hash: string; kind: SnapshotFileKind; content?: string } | undefined> {
+  let handle
+  try {
+    handle = await open(absolute, 'r')
+  } catch {
+    return undefined
+  }
+  try {
+    const hash = createHash('sha256')
+    const buffer = Buffer.alloc(64 * 1024)
+    let probed = 0
+    let binary = false
+    let position = 0
+    while (position < size) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position)
+      if (bytesRead === 0) break
+      if (!binary && probed < BINARY_PROBE_BYTES) {
+        const window = Math.min(bytesRead, BINARY_PROBE_BYTES - probed)
+        if (buffer.subarray(0, window).includes(0)) binary = true
+        probed += window
+      }
+      hash.update(buffer.subarray(0, bytesRead))
+      position += bytesRead
+    }
+    return { hash: hash.digest('hex'), kind: binary ? 'binary' : 'text' }
+  } catch {
+    return undefined
+  } finally {
+    await handle.close().catch(() => undefined)
+  }
+}
+
+/**
+ * Stream one file once, detecting binary by NUL bytes in the probe window,
+ * hashing the full content in the same pass, and decoding text content for
+ * retention (the turn-start baseline path).
+ * @returns hash, kind, and (for text files) the decoded content, or undefined
+ * when the read failed mid-way.
+ */
+async function hashAndContent(
+  absolute: string,
+  size: number,
+): Promise<{ hash: string; kind: SnapshotFileKind; content?: string } | undefined> {
+  let handle
+  try {
+    handle = await open(absolute, 'r')
+  } catch {
+    return undefined
+  }
+  try {
+    const hash = createHash('sha256')
+    const chunks: Buffer[] = []
+    const buffer = Buffer.alloc(64 * 1024)
+    let probed = 0
+    let binary = false
+    let position = 0
+    while (position < size) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position)
+      if (bytesRead === 0) break
+      if (!binary && probed < BINARY_PROBE_BYTES) {
+        const window = Math.min(bytesRead, BINARY_PROBE_BYTES - probed)
+        if (buffer.subarray(0, window).includes(0)) binary = true
+        probed += window
+      }
+      hash.update(buffer.subarray(0, bytesRead))
+      chunks.push(Buffer.from(buffer.subarray(0, bytesRead)))
+      position += bytesRead
+    }
+    if (binary) return { hash: hash.digest('hex'), kind: 'binary' }
+    const decoder = new TextDecoder('utf-8', { fatal: true })
+    try {
+      const content = decoder.decode(Buffer.concat(chunks))
+      return { hash: hash.digest('hex'), kind: 'text', content }
+    } catch {
+      // Not valid UTF-8: classify as binary so the diff never mangles it.
+      return { hash: hash.digest('hex'), kind: 'binary' }
+    }
+  } catch {
+    return undefined
+  } finally {
+    await handle.close().catch(() => undefined)
+  }
+}
+
+/** One file's quick stability token for the settle check. */
+export interface MetadataToken {
+  readonly size: number
+  readonly mtimeNs: number
+}
+
+/**
+ * Fast metadata-only scan of the workspace: `relPath -> size:mtime` tokens
+ * without reading any content. Used to detect whether the tree has stopped
+ * changing after a turn ends.
+ */
+export async function scanMetadata(
+  root: string,
+  ignore: CompiledIgnore,
+): Promise<Map<string, MetadataToken>> {
+  const tokens = new Map<string, MetadataToken>()
+  const pending: Array<{ dir: string; rel: string }> = [{ dir: root, rel: '' }]
+  while (pending.length > 0) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- the loop condition guarantees a pending entry
+    const { dir, rel } = pending.pop()!
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const relPath = rel === '' ? entry.name : `${rel}/${entry.name}`
+      if (entry.isDirectory()) {
+        if (entry.isSymbolicLink()) continue
+        if (ignore.isIgnored(relPath, true)) continue
+        pending.push({ dir: join(dir, entry.name), rel: relPath })
+        continue
+      }
+      if (ignore.isIgnored(relPath, false)) continue
+      try {
+        const info = await stat(join(dir, entry.name))
+        if (info.isFile()) tokens.set(relPath, { size: info.size, mtimeNs: mtimeNs(info) })
+      } catch {
+        // Vanishing or unreadable file: absent from the token map.
+      }
+    }
+  }
+  return tokens
+}
+
+/** Whether two metadata scans agree on the whole tree. */
+export function sameMetadata(left: ReadonlyMap<string, MetadataToken>, right: ReadonlyMap<string, MetadataToken>): boolean {
+  if (left.size !== right.size) return false
+  for (const [path, token] of left) {
+    const other = right.get(path)
+    if (other === undefined || other.size !== token.size || other.mtimeNs !== token.mtimeNs) return false
+  }
+  return true
+}
+
+/**
+ * Read one file's bytes as UTF-8 text, or report it as binary/large.
+ * @param absolute - file path to read.
+ * @param maxBytes - files at or above this size are reported as `large` without reading.
+ * @returns decoded text, or null when the file is binary, oversized, or unreadable.
+ */
+export async function readTextFile(absolute: string, maxBytes: number): Promise<string | null> {
+  let info
+  try {
+    info = await stat(absolute)
+  } catch {
+    return null
+  }
+  if (!info.isFile()) return null
+  if (info.size >= maxBytes) return null
+  let handle
+  try {
+    handle = await open(absolute, 'r')
+  } catch {
+    return null
+  }
+  try {
+    const buffer = Buffer.alloc(info.size || 1)
+    let position = 0
+    while (position < info.size) {
+      const { bytesRead } = await handle.read(buffer, position, info.size - position, position)
+      if (bytesRead === 0) break
+      position += bytesRead
+    }
+    const bytes = position === buffer.length ? buffer : buffer.subarray(0, position)
+    if (bytes.subarray(0, BINARY_PROBE_BYTES).includes(0)) return null
+    const decoder = new TextDecoder('utf-8', { fatal: true })
+    try {
+      return decoder.decode(bytes)
+    } catch {
+      return null // Not valid UTF-8: treat as binary rather than mangling it.
+    }
+  } catch {
+    return null
+  } finally {
+    await handle.close().catch(() => undefined)
+  }
+}
+
+/** Normalize a workspace-relative path to forward slashes for storage. */
+export function toRelativePath(root: string, absolute: string): string {
+  return absolute.replaceAll(sep, '/').replaceAll(`${root.replaceAll(sep, '/')}/`, '')
+}
+
+/** Whether a stored relative path stays inside the workspace (no traversal). */
+export function isSafeRelativePath(path: string): boolean {
+  if (path === '' || path.startsWith('/') || /^[a-zA-Z]:/.test(path)) return false
+  if (path.split('/').some(segment => segment === '..')) return false
+  if (path.includes('\\')) return false // Stored paths are forward-slash only.
+  return true
+}
+
+/** Reject an absolute path outside the root before any file access. */
+export function assertInsideRoot(root: string, absolute: string): void {
+  const normalized = absolute.replaceAll(sep, '/')
+  const rootNormalized = root.replaceAll(sep, '/')
+  if (!normalized.startsWith(`${rootNormalized}/`) && normalized !== rootNormalized) {
+    throw new Error(`path ${JSON.stringify(absolute)} escapes workspace root ${JSON.stringify(root)}`)
+  }
+}
+
+/** lstat-based directory check used by tests and the walker's helpers. */
+export async function isDirectory(absolute: string): Promise<boolean> {
+  try {
+    return (await lstat(absolute)).isDirectory()
+  } catch {
+    return false
+  }
+}

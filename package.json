@@ -1,0 +1,10 @@
+{
+  "name": "dsh-custom-plugins",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone DeepSeek Harness plugins: per-turn change monitor (host) plus the changes panel and voice input (browser), extracted from the dsh source tree",
+  "type": "module",
+  "scripts": {
+    "bundle": "pnpm -r run bundle"
+  }
+}

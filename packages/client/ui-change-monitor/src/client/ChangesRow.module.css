@@ -1,0 +1,56 @@
+/* Turn-tail changes summary: one line with an expandable file list. */
+
+.root {
+  margin-top: 14px;
+  display: grid;
+  justify-items: start;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.files {
+  font-weight: 600;
+}
+
+.counts {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.addCount {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.delCount {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.action {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.panel {
+  width: min(720px, 100%);
+  margin-top: 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--dsw-alias-bg-layer-1);
+}

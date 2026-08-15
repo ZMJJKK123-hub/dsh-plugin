@@ -1,0 +1,1 @@
+{"version":3,"file":"typert.remote-client.d.ts","names":["current","debug","file","session","turn","turns"],"sources":["../src/index.ts"],"sourcesContent":[null],"mappings":";;;;;;;;;;IAucQA,O;IAcAC,K;IAwBAC,I;IAoBAC,O;IAlCAC,I;IArCAC,K;;;IAaAL,uB;IAcAC,qB;IAwBAC,oB;IAoBAC,uB;IAlCAC,oB;IArCAC,qB","ignoreList":[]}

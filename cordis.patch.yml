@@ -1,0 +1,14 @@
+# Profile patch rows for the standalone plugins. Copy the INSERT entries
+# below into ~/.dsh/profiles/web/cordis.patch.yml when the checkout's
+# web-app bundle does not already register these rows (installed-dsh mode).
+# In source-run mode the web-app bundle already owns the rows; do NOT add
+# them again.
+- insert:
+    - id: change-monitor
+      name: '@dsh-custom/dsh-change-monitor'
+
+    - id: ui-change-monitor
+      name: '@dsh-custom/dsh-client-ui-change-monitor'
+
+    - id: ui-voice-input
+      name: '@dsh-custom/dsh-client-ui-voice-input'
