@@ -1,10 +1,14 @@
+import { execFile } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { promisify } from 'node:util'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { SessionId, SessionStore } from '@deepseek-ai/dsh-session'
 import { ChangeMonitorService, type Config } from '../src/index.ts'
+
+const git = promisify(execFile)
 
 let workspace: string
 let storeRoot: string
@@ -46,17 +50,18 @@ async function waitFor<T>(probe: () => Promise<T | undefined>, label: string): P
 }
 
 /** A live session rooted at the workspace. */
-function createSession(): { id: SessionId; events: (type: 'turn/start' | 'turn/end', turn: number) => Promise<void> } {
+function createSession(startWaitMs = 120): { id: SessionId; events: (type: 'turn/start' | 'turn/end', turn: number) => Promise<void> } {
   const session = ctx.sessions.create(undefined, { meta: { cwd: workspace } })
   return {
     id: session.id,
     // Awaiting after turn/start lets the asynchronous before snapshot land
     // before the test mutates the workspace (mirrors the real loop, where a
-    // model round trip separates the two).
+    // model round trip separates the two). Git workspaces need longer: the
+    // candidate probe spawns git once per turn start.
     events: async (type, turn) => {
       if (type === 'turn/start') {
         session.append('turn/start', { turn })
-        await new Promise(resolve => setTimeout(resolve, 120))
+        await new Promise(resolve => setTimeout(resolve, startWaitMs))
       } else {
         session.append('turn/end', { turn, reason: { kind: 'completed' } })
       }
@@ -269,5 +274,40 @@ describe('ChangeMonitorService lifecycle', () => {
     expect(turns.map(entry => entry.turn).sort()).toEqual([2, 3])
     await trimmedCtx.fiber.dispose().catch(() => undefined)
     await rm(trimmedStore, { recursive: true, force: true })
+  })
+
+  it('records changes through the git candidate fast path', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    // A tracked file modified during the turn (clean at turn start: the
+    // before state must come from git HEAD via backfill), plus an untracked
+    // file created mid-turn (no HEAD version: reported as added).
+    await writeFile(join(workspace, 'tracked.txt'), 'v2\n', 'utf8')
+    await writeFile(join(workspace, 'untracked.txt'), 'new\n', 'utf8')
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'git turn 1 record')
+    const paths = summary.files.map(file => file.path).sort()
+    expect(paths).toEqual(['tracked.txt', 'untracked.txt'])
+    const tracked = summary.files.find(file => file.path === 'tracked.txt')
+    expect(tracked?.status).toBe('modified')
+    // The before text is the HEAD version (v1), never the disk state.
+    const file = await monitor.file({ sessionId: id, turn: 1, path: 'tracked.txt' })
+    expect(file.ok).toBe(true)
+    if (file.ok) {
+      const hunkLines = file.value.hunks.flatMap(hunk => hunk.lines)
+      expect(hunkLines.some(line => line.kind === 'del' && line.text === 'v1')).toBe(true)
+      expect(hunkLines.some(line => line.kind === 'add' && line.text === 'v2')).toBe(true)
+    }
   })
 })

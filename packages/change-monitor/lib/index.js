@@ -47,13 +47,15 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
-// packages/session/change-monitor/src/index.ts
+// src/index.ts
 import z from "@deepseek-ai/schemastery";
+import { createHash as createHash2 } from "node:crypto";
+import { stat as stat2 } from "node:fs/promises";
 import { join as join3 } from "node:path";
 import { dshHomePath } from "@deepseek-ai/dsh-home-paths";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 
-// packages/session/change-monitor/src/diff.ts
+// src/diff.ts
 function linesOf(text) {
   if (text === "") return [];
   const lines = text.split("\n");
@@ -259,7 +261,7 @@ function newForIndex(index, ops, totalAfter) {
 var DEFAULT_CONTEXT_LINES = 5;
 var DEFAULT_MAX_DIFF_CELLS = 25e6;
 
-// packages/session/change-monitor/src/ignore.ts
+// src/ignore.ts
 var DEFAULT_IGNORE_PATTERNS = [
   // Directories.
   ".git/",
@@ -379,10 +381,11 @@ var CompiledIgnore = class {
   }
 };
 
-// packages/session/change-monitor/src/snapshot.ts
+// src/snapshot.ts
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import { lstat, open, readdir, stat } from "node:fs/promises";
-import { join, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 var BINARY_PROBE_BYTES = 8192;
 var FILE_CONCURRENCY = 16;
 async function snapshotWorkspace(root, options) {
@@ -597,8 +600,86 @@ async function readTextFile(absolute, maxBytes) {
     await handle.close().catch(() => void 0);
   }
 }
+async function gitChangedPaths(root) {
+  if (!await hasGitRoot(root)) return void 0;
+  let stdout;
+  try {
+    const result = await execFileAsync("git", ["status", "--porcelain", "-z", "--untracked-files=all"], {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 1e4
+    });
+    stdout = result.stdout;
+  } catch {
+    return void 0;
+  }
+  const paths = [];
+  for (const entry of stdout.split("\0")) {
+    if (entry === "") continue;
+    let path = entry.length >= 3 ? entry.slice(3) : entry;
+    const arrow = path.indexOf(" -> ");
+    if (arrow !== -1) path = path.slice(arrow + 4);
+    if (path !== "") paths.push(path);
+  }
+  return paths;
+}
+async function hasGitRoot(root) {
+  let dir = root;
+  for (let depth = 0; depth < 12; depth += 1) {
+    try {
+      const probe = await stat(join(dir, ".git"));
+      if (probe.isDirectory() || probe.isFile()) return true;
+    } catch {
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return false;
+    dir = parent;
+  }
+  return false;
+}
+async function snapshotCandidates(root, paths, options) {
+  const files = /* @__PURE__ */ new Map();
+  for (let offset = 0; offset < paths.length; offset += FILE_CONCURRENCY) {
+    const batch = paths.slice(offset, offset + FILE_CONCURRENCY);
+    const metas = await Promise.all(batch.map((path) => metaOf(join(root, path), path, options)));
+    for (let index = 0; index < batch.length; index += 1) {
+      const path = batch[index];
+      const meta = metas[index];
+      if (path !== void 0 && meta !== void 0) files.set(path, meta);
+    }
+  }
+  return { root, time: Date.now(), files };
+}
+function execFileAsync(file, args, options) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, [...args], { cwd: options.cwd, stdio: ["ignore", "pipe", "ignore"] });
+    const chunks = [];
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, options.timeout);
+    child.stdout.on("data", (chunk) => {
+      chunks.push(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        reject(new Error(`git ${file} timed out`));
+        return;
+      }
+      if (code !== 0) {
+        reject(new Error(`git ${file} exited ${String(code)}`));
+        return;
+      }
+      const stdout = Buffer.concat(chunks);
+      resolve({ stdout: options.encoding === "utf8" ? stdout.toString("utf8") : stdout });
+    });
+  });
+}
 
-// packages/session/change-monitor/src/storage.ts
+// src/storage.ts
 import { mkdir, readFile, readdir as readdir2, rename, unlink, writeFile } from "node:fs/promises";
 import { join as join2 } from "node:path";
 var RENAME_ATTEMPTS = 3;
@@ -813,7 +894,7 @@ function storedFileOf(record, path) {
   return record.files.find((file) => file.path === path);
 }
 
-// packages/session/change-monitor/src/index.ts
+// src/index.ts
 var DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
 var DEFAULT_SETTLE_DELAY_MS = 200;
 var DEFAULT_SETTLE_MAX_ATTEMPTS = 5;
@@ -900,16 +981,22 @@ var ChangeMonitorService = class extends (_a = TypertRemoteService, _turns_dec =
       turn,
       before: void 0,
       beforeReady: Promise.resolve(),
-      busy: Promise.resolve()
+      busy: Promise.resolve(),
+      git: false
     };
     this.states.set(session.id, bookkeeping);
-    bookkeeping.beforeReady = snapshotWorkspace(cwd, {
-      maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-      ignore: this.ignore
-    }).then(
-      (snapshot) => {
-        bookkeeping.before = snapshot;
-      },
+    bookkeeping.beforeReady = (async () => {
+      const candidates = await gitChangedPaths(cwd);
+      bookkeeping.git = candidates !== void 0;
+      bookkeeping.before = candidates === void 0 ? await snapshotWorkspace(cwd, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore
+      }) : await snapshotCandidates(cwd, candidates, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore
+      });
+    })().then(
+      () => void 0,
       (error) => {
         this.ctx.logger.warn(`change monitor turn ${turn} before snapshot failed: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -938,18 +1025,37 @@ var ChangeMonitorService = class extends (_a = TypertRemoteService, _turns_dec =
       return;
     }
     await bookkeeping.beforeReady;
-    await this.waitForStability(root);
     const before = bookkeeping.before;
     if (before === void 0) {
       this.eventLog.push({ time: Date.now(), session: sessionId, type: "debug/no-before", turn: bookkeeping.turn });
       this.ctx.logger.warn(`change monitor: turn ${bookkeeping.turn} has no before snapshot; skipping`);
       return;
     }
-    const after = await snapshotWorkspace(root, {
-      maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-      ignore: this.ignore,
-      retainContent: false
-    });
+    let after;
+    if (bookkeeping.git) {
+      const candidates = await gitChangedPaths(root) ?? [];
+      await this.waitForStability(root, candidates);
+      after = await snapshotCandidates(root, candidates, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore,
+        retainContent: false
+      });
+      const beforeMerged = await this.backfillHeadBefore(root, before, after);
+      const record2 = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, after);
+      this.latest.set(sessionId, summarizeChangeSet(record2));
+      this.eventLog.push({ time: Date.now(), session: sessionId, type: "debug/stored", turn: bookkeeping.turn });
+      if (this.config.historyEnabled) {
+        await this.store.append(record2);
+      }
+      return;
+    } else {
+      await this.waitForStability(root);
+      after = await snapshotWorkspace(root, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore,
+        retainContent: false
+      });
+    }
     const record = await this.buildChangeSet(sessionId, bookkeeping.turn, before, after);
     this.latest.set(sessionId, summarizeChangeSet(record));
     this.eventLog.push({ time: Date.now(), session: sessionId, type: "debug/stored", turn: bookkeeping.turn });
@@ -957,15 +1063,49 @@ var ChangeMonitorService = class extends (_a = TypertRemoteService, _turns_dec =
       await this.store.append(record);
     }
   }
-  /** Re-scan until the tree's metadata stops changing, bounded by attempts. */
-  async waitForStability(root) {
+  /**
+   * Re-scan until the tree's metadata stops changing, bounded by attempts.
+   * The git-candidate variant checks only the changed-path set (seconds on
+   * huge trees); the full-tree variant walks everything.
+   * @param root - workspace root.
+   * @param candidates - git candidate paths (undefined = full-tree scan).
+   */
+  async waitForStability(root, candidates) {
     await delay(this.config.settleDelayMs);
     for (let attempt = 0; attempt < this.config.settleMaxAttempts; attempt += 1) {
-      const first = await scanMetadata(root, this.ignore);
+      const first = candidates !== void 0 ? await candidateTokens(root, candidates) : await scanMetadata(root, this.ignore);
       await delay(this.config.settleDelayMs);
-      const second = await scanMetadata(root, this.ignore);
-      if (sameMetadata(first, second)) return;
+      const second = candidates !== void 0 ? await candidateTokens(root, candidates) : await scanMetadata(root, this.ignore);
+      if (candidates !== void 0 ? sameTokens(first, second) : sameMetadata(first, second)) return;
     }
+  }
+  /**
+   * Backfill before-snapshots for after-side paths absent from the before
+   * snapshot: a file clean at turn start that the turn modified. Its
+   * turn-start content is exactly the git HEAD version, so `git show` supplies
+   * it; untracked new files (absent from HEAD too) stay before-less and the
+   * diff reports them as added.
+   * @param root - workspace root.
+   * @param before - the turn-start snapshot (read-only).
+   * @param after - the turn-end candidate snapshot.
+   * @returns the before snapshot with the backfilled entries.
+   */
+  async backfillHeadBefore(root, before, after) {
+    const missing = [...after.files.keys()].filter((path) => !before.files.has(path));
+    if (missing.length === 0) return before;
+    const merged = new Map(before.files);
+    for (const path of missing) {
+      const text = await readHeadFile(root, path);
+      if (text === null) continue;
+      merged.set(path, {
+        size: Buffer.byteLength(text, "utf8"),
+        mtimeNs: 0,
+        hash: createHash2("sha256").update(text).digest("hex"),
+        kind: "text",
+        content: text
+      });
+    }
+    return { ...before, files: merged };
   }
   /** Compute the stored change set from the before/after snapshots. */
   async buildChangeSet(sessionId, turn, before, after) {
@@ -1196,6 +1336,43 @@ function delay(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+async function candidateTokens(root, candidates) {
+  const tokens = /* @__PURE__ */ new Map();
+  const CONCURRENCY = 32;
+  for (let offset = 0; offset < candidates.length; offset += CONCURRENCY) {
+    const batch = candidates.slice(offset, offset + CONCURRENCY);
+    const infos = await Promise.all(batch.map((path) => stat2(join3(root, path)).catch(() => void 0)));
+    for (let index = 0; index < batch.length; index += 1) {
+      const path = batch[index];
+      const info = infos[index];
+      if (path !== void 0 && info?.isFile()) {
+        tokens.set(path, { size: info.size, mtimeNs: mtimeNs2(info) });
+      }
+    }
+  }
+  return tokens;
+}
+function sameTokens(left, right) {
+  if (left.size !== right.size) return false;
+  for (const [path, token] of left) {
+    const other = right.get(path);
+    if (other === void 0 || other.size !== token.size || other.mtimeNs !== token.mtimeNs) return false;
+  }
+  return true;
+}
+function mtimeNs2(info) {
+  if (info.mtimeNs !== void 0) return info.mtimeNs;
+  return Math.floor(info.mtimeMs * 1e6);
+}
+async function readHeadFile(root, path) {
+  try {
+    const { stdout } = await execFileAsync("git", ["show", `HEAD:${path}`], { cwd: root, encoding: "buffer", timeout: 1e4 });
+    if (stdout.subarray(0, 8192).includes(0)) return null;
+    return stdout.toString("utf8");
+  } catch {
+    return null;
+  }
 }
 var index_default = ChangeMonitorService;
 export {

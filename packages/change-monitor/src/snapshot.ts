@@ -8,12 +8,13 @@
  * once per turn, not twice. A fast metadata-only scan supports the settle
  * check.
  *
- * @module @dsh-custom/dsh-change-monitor
+ * @module @deepseek-ai/dsh-change-monitor
  */
 
 import { createHash } from 'node:crypto'
+import { spawn } from 'node:child_process'
 import { lstat, open, readdir, stat } from 'node:fs/promises'
-import { join, sep } from 'node:path'
+import { dirname, join, sep } from 'node:path'
 import type { CompiledIgnore } from './ignore.ts'
 
 /** How a file is classified for diffing. */
@@ -382,4 +383,122 @@ export async function isDirectory(absolute: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/**
+ * The workspace's changed paths according to git — modified, added, deleted,
+ * and untracked files relative to HEAD, in forward-slash form. This is the
+ * fast path for large trees: instead of walking every file, only the git
+ * candidate set is snapshotted. Returns undefined when the root is not a git
+ * repository (or git is unavailable), which keeps the full-tree walk as the
+ * fallback.
+ * @param root - workspace root directory.
+ * @returns candidate paths, or undefined for non-git workspaces.
+ */
+export async function gitChangedPaths(root: string): Promise<string[] | undefined> {
+  // Probe for the repository by filesystem first: spawning git on every
+  // turn-start costs hundreds of milliseconds, which would let a short
+  // turn's before-snapshot drift past the first writes. Non-git workspaces
+  // resolve immediately without any process.
+  if (!await hasGitRoot(root)) return undefined
+  let stdout: string
+  try {
+    const result = await execFileAsync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], {
+      cwd: root, encoding: 'utf8', timeout: 10_000,
+    })
+    stdout = result.stdout
+  } catch {
+    return undefined
+  }
+  const paths: string[] = []
+  for (const entry of stdout.split('\0')) {
+    if (entry === '') continue
+    // Porcelain v1 entry: `XY path` (rename: `R  old -> new` — keep the
+    // destination). The -z form has no quoting or newlines to undo.
+    let path = entry.length >= 3 ? entry.slice(3) : entry
+    const arrow = path.indexOf(' -> ')
+    if (arrow !== -1) path = path.slice(arrow + 4)
+    if (path !== '') paths.push(path)
+  }
+  return paths
+}
+
+/**
+ * Whether `root` sits inside a git repository: walk up from the root
+ * looking for a `.git` directory or worktree file (bounded depth). Pure
+ * filesystem probes — no process spawn.
+ * @param root - workspace root directory.
+ * @returns true when a repository boundary is found.
+ */
+async function hasGitRoot(root: string): Promise<boolean> {
+  let dir = root
+  for (let depth = 0; depth < 12; depth += 1) {
+    try {
+      const probe = await stat(join(dir, '.git'))
+      if (probe.isDirectory() || probe.isFile()) return true
+    } catch {
+      // No .git here; walk up one level.
+    }
+    const parent = dirname(dir)
+    if (parent === dir) return false
+    dir = parent
+  }
+  return false
+}
+
+/**
+ * Snapshot only the given workspace-relative paths (the git candidate set).
+ * Directory entries are rejected (git status lists files, not directories,
+ * with `--untracked-files=all`); the walker's per-file error containment
+ * applies per candidate.
+ * @param root - workspace root directory.
+ * @param paths - candidate paths relative to the root.
+ * @param options - cap, ignore set, and content-retention choice.
+ * @returns the candidate snapshot.
+ */
+export async function snapshotCandidates(
+  root: string,
+  paths: readonly string[],
+  options: SnapshotOptions,
+): Promise<WorkspaceSnapshot> {
+  const files = new Map<string, SnapshotFileMeta>()
+  for (let offset = 0; offset < paths.length; offset += FILE_CONCURRENCY) {
+    const batch = paths.slice(offset, offset + FILE_CONCURRENCY)
+    const metas = await Promise.all(batch.map(path => metaOf(join(root, path), path, options)))
+    for (let index = 0; index < batch.length; index += 1) {
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- batch and metas share lengths
+      const path = batch[index]
+      const meta = metas[index]
+      if (path !== undefined && meta !== undefined) files.set(path, meta)
+    }
+  }
+  return { root, time: Date.now(), files }
+}
+
+/** Promisified git invocation (git status / git show). */
+export function execFileAsync<E extends 'utf8' | 'buffer'>(
+  file: string,
+  args: readonly string[],
+  options: { cwd: string; encoding: E; timeout: number },
+): Promise<{ stdout: E extends 'buffer' ? Buffer : string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, [...args], { cwd: options.cwd, stdio: ['ignore', 'pipe', 'ignore'] })
+    const chunks: Buffer[] = []
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      child.kill()
+    }, options.timeout)
+    child.stdout.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (timedOut) { reject(new Error(`git ${file} timed out`)); return }
+      if (code !== 0) { reject(new Error(`git ${file} exited ${String(code)}`)); return }
+      const stdout = Buffer.concat(chunks)
+      // The generic conditional return type cannot narrow from the runtime branch.
+      // oxlint-disable-next-line typescript/no-unnecessary-type-assertion
+      resolve({ stdout: (options.encoding === 'utf8' ? stdout.toString('utf8') : stdout) as E extends 'buffer' ? Buffer : string })
+    })
+  })
 }

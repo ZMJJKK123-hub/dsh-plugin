@@ -11,11 +11,13 @@
  * what that turn changed — including files the agent wrote and later restored
  * (those end up hash-equal and are reported as unchanged).
  *
- * @module @dsh-custom/dsh-change-monitor
+ * @module @deepseek-ai/dsh-change-monitor
  */
 
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { createHash } from 'node:crypto'
+import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import type { Session, SessionId } from '@deepseek-ai/dsh-session'
@@ -26,6 +28,7 @@ import {
 import { compileIgnorePatterns, type CompiledIgnore } from './ignore.ts'
 import {
   sameMetadata, scanMetadata, snapshotWorkspace, readTextFile,
+  gitChangedPaths, snapshotCandidates, execFileAsync,
   type SnapshotFileMeta, type WorkspaceSnapshot,
 } from './snapshot.ts'
 import {
@@ -131,6 +134,11 @@ interface TurnBookkeeping {
   /** Settles when the before snapshot finishes (success or contained failure). */
   beforeReady: Promise<void>
   busy: Promise<void>
+  /**
+   * Whether the before snapshot came from the git candidate set (fast path)
+   * rather than the full-tree walk; the settle mirrors the same choice.
+   */
+  git: boolean
 }
 
 /**
@@ -223,18 +231,30 @@ export class ChangeMonitorService extends TypertRemoteService {
     const cwd = session.header.cwd
     if (cwd === undefined) return
     const bookkeeping: TurnBookkeeping = {
-      turn, before: undefined, beforeReady: Promise.resolve(), busy: Promise.resolve(),
+      turn, before: undefined, beforeReady: Promise.resolve(), busy: Promise.resolve(), git: false,
     }
     this.states.set(session.id, bookkeeping)
     // The snapshot runs concurrently with the agent's first steps. In
     // practice it lands long before any tool write (a model round trip
     // separates turn/start from the first tool call); the settle path awaits
     // `beforeReady` so a slow snapshot is still used when it completes in time.
-    bookkeeping.beforeReady = snapshotWorkspace(cwd, {
-      maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-      ignore: this.ignore,
-    }).then(
-      (snapshot) => { bookkeeping.before = snapshot },
+    // A git workspace snapshots only the changed-path candidate set (git
+    // status) — seconds instead of a full-tree walk on huge trees; non-git
+    // workspaces fall back to the full walk.
+    bookkeeping.beforeReady = (async () => {
+      const candidates = await gitChangedPaths(cwd)
+      bookkeeping.git = candidates !== undefined
+      bookkeeping.before = candidates === undefined
+        ? await snapshotWorkspace(cwd, {
+          maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+          ignore: this.ignore,
+        })
+        : await snapshotCandidates(cwd, candidates, {
+          maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+          ignore: this.ignore,
+        })
+    })().then(
+      () => undefined,
       (error: unknown) => {
         this.ctx.logger.warn(`change monitor turn ${turn} before snapshot failed: ${error instanceof Error ? error.message : String(error)}`)
       },
@@ -274,7 +294,6 @@ export class ChangeMonitorService extends TypertRemoteService {
       return
     }
     await bookkeeping.beforeReady
-    await this.waitForStability(root)
     const before = bookkeeping.before
     if (before === undefined) {
       this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/no-before', turn: bookkeeping.turn })
@@ -283,11 +302,35 @@ export class ChangeMonitorService extends TypertRemoteService {
     }
     // The after view needs hashes only: changed files' texts are read from
     // disk at diff time, so the retained-content path runs once per turn.
-    const after = await snapshotWorkspace(root, {
-      maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-      ignore: this.ignore,
-      retainContent: false,
-    })
+    let after: WorkspaceSnapshot
+    if (bookkeeping.git) {
+      const candidates = await gitChangedPaths(root) ?? []
+      await this.waitForStability(root, candidates)
+      after = await snapshotCandidates(root, candidates, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore,
+        retainContent: false,
+      })
+      // A candidate new to the turn-end set (clean at turn start, changed
+      // during the turn) has no before snapshot; git's HEAD version is the
+      // exact turn-start state, so backfill it into the BEFORE snapshot
+      // before diffing. The after snapshot keeps every candidate.
+      const beforeMerged = await this.backfillHeadBefore(root, before, after)
+      const record = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, after)
+      this.latest.set(sessionId, summarizeChangeSet(record))
+      this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/stored', turn: bookkeeping.turn })
+      if (this.config.historyEnabled) {
+        await this.store.append(record)
+      }
+      return
+    } else {
+      await this.waitForStability(root)
+      after = await snapshotWorkspace(root, {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore,
+        retainContent: false,
+      })
+    }
     const record = await this.buildChangeSet(sessionId, bookkeeping.turn, before, after)
     this.latest.set(sessionId, summarizeChangeSet(record))
     this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/stored', turn: bookkeeping.turn })
@@ -296,15 +339,58 @@ export class ChangeMonitorService extends TypertRemoteService {
     }
   }
 
-  /** Re-scan until the tree's metadata stops changing, bounded by attempts. */
-  private async waitForStability(root: string): Promise<void> {
+  /**
+   * Re-scan until the tree's metadata stops changing, bounded by attempts.
+   * The git-candidate variant checks only the changed-path set (seconds on
+   * huge trees); the full-tree variant walks everything.
+   * @param root - workspace root.
+   * @param candidates - git candidate paths (undefined = full-tree scan).
+   */
+  private async waitForStability(root: string, candidates?: readonly string[]): Promise<void> {
     await delay(this.config.settleDelayMs)
     for (let attempt = 0; attempt < this.config.settleMaxAttempts; attempt += 1) {
-      const first = await scanMetadata(root, this.ignore)
+      const first = candidates !== undefined
+        ? await candidateTokens(root, candidates)
+        : await scanMetadata(root, this.ignore)
       await delay(this.config.settleDelayMs)
-      const second = await scanMetadata(root, this.ignore)
-      if (sameMetadata(first, second)) return
+      const second = candidates !== undefined
+        ? await candidateTokens(root, candidates)
+        : await scanMetadata(root, this.ignore)
+      if (candidates !== undefined ? sameTokens(first, second) : sameMetadata(first, second)) return
     }
+  }
+
+  /**
+   * Backfill before-snapshots for after-side paths absent from the before
+   * snapshot: a file clean at turn start that the turn modified. Its
+   * turn-start content is exactly the git HEAD version, so `git show` supplies
+   * it; untracked new files (absent from HEAD too) stay before-less and the
+   * diff reports them as added.
+   * @param root - workspace root.
+   * @param before - the turn-start snapshot (read-only).
+   * @param after - the turn-end candidate snapshot.
+   * @returns the before snapshot with the backfilled entries.
+   */
+  private async backfillHeadBefore(
+    root: string,
+    before: WorkspaceSnapshot,
+    after: WorkspaceSnapshot,
+  ): Promise<WorkspaceSnapshot> {
+    const missing = [...after.files.keys()].filter(path => !before.files.has(path))
+    if (missing.length === 0) return before
+    const merged = new Map(before.files)
+    for (const path of missing) {
+      const text = await readHeadFile(root, path)
+      if (text === null) continue
+      merged.set(path, {
+        size: Buffer.byteLength(text, 'utf8'),
+        mtimeNs: 0,
+        hash: createHash('sha256').update(text).digest('hex'),
+        kind: 'text',
+        content: text,
+      })
+    }
+    return { ...before, files: merged }
   }
 
   /** Compute the stored change set from the before/after snapshots. */
@@ -554,6 +640,70 @@ function withoutContent(file: StoredFileChange): FileChange {
 /** One-shot delay; the monitor's best-effort wrapper tolerates teardown races. */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, ms) })
+}
+
+/** One candidate's stability token: size + mtime, like the full-tree scan. */
+interface CandidateToken {
+  readonly size: number
+  readonly mtimeNs: number
+}
+
+/**
+ * Stability tokens for the git candidate set only — stat each candidate
+ * (bounded concurrency), so the settle check costs seconds even when the
+ * workspace holds tens of thousands of files.
+ * @param root - workspace root.
+ * @param candidates - candidate paths.
+ * @returns path -> token map; unreadable paths are absent.
+ */
+async function candidateTokens(root: string, candidates: readonly string[]): Promise<Map<string, CandidateToken>> {
+  const tokens = new Map<string, CandidateToken>()
+  const CONCURRENCY = 32
+  for (let offset = 0; offset < candidates.length; offset += CONCURRENCY) {
+    const batch = candidates.slice(offset, offset + CONCURRENCY)
+    const infos = await Promise.all(batch.map(path => stat(join(root, path)).catch(() => undefined)))
+    for (let index = 0; index < batch.length; index += 1) {
+      const path = batch[index]
+      const info = infos[index]
+      if (path !== undefined && info?.isFile()) {
+        tokens.set(path, { size: info.size, mtimeNs: mtimeNs(info) })
+      }
+    }
+  }
+  return tokens
+}
+
+/** Whether two candidate token maps agree. */
+function sameTokens(left: ReadonlyMap<string, CandidateToken>, right: ReadonlyMap<string, CandidateToken>): boolean {
+  if (left.size !== right.size) return false
+  for (const [path, token] of left) {
+    const other = right.get(path)
+    if (other === undefined || other.size !== token.size || other.mtimeNs !== token.mtimeNs) return false
+  }
+  return true
+}
+
+/** Nanosecond mtime, with the millisecond fallback for odd filesystems. */
+function mtimeNs(info: { mtimeMs: number; mtimeNs?: number }): number {
+  if (info.mtimeNs !== undefined) return info.mtimeNs
+  return Math.floor(info.mtimeMs * 1e6)
+}
+
+/**
+ * Read one workspace-relative path's content at git HEAD — the exact
+ * turn-start state of a file that was clean when the turn began.
+ * @param root - workspace root.
+ * @param path - workspace-relative path.
+ * @returns the file's UTF-8 text, or null when HEAD lacks it or it is binary.
+ */
+async function readHeadFile(root: string, path: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['show', `HEAD:${path}`], { cwd: root, encoding: 'buffer', timeout: 10_000 })
+    if (stdout.subarray(0, 8192).includes(0)) return null
+    return stdout.toString('utf8')
+  } catch {
+    return null
+  }
 }
 
 export default ChangeMonitorService

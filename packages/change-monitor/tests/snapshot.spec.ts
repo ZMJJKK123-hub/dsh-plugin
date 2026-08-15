@@ -1,13 +1,16 @@
+import { execFile } from 'node:child_process'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { promisify } from 'node:util'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { compileIgnorePatterns } from '../src/ignore.ts'
 import {
-  readTextFile, sameMetadata, scanMetadata, snapshotWorkspace,
+  gitChangedPaths, readTextFile, sameMetadata, scanMetadata, snapshotCandidates, snapshotWorkspace,
 } from '../src/snapshot.ts'
 
 const MAX = 10 * 1024 * 1024
+const git = promisify(execFile)
 
 let dir: string
 
@@ -18,6 +21,17 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(dir, { recursive: true, force: true })
 })
+
+/** Turn `dir` into a git repository with one initial commit. */
+async function initGitRepo(): Promise<void> {
+  await git('git', ['init'], { cwd: dir })
+  await git('git', ['config', 'user.email', 'test@example.com'], { cwd: dir })
+  await git('git', ['config', 'user.name', 'Test'], { cwd: dir })
+  await writeFile(join(dir, '.gitignore'), '*.log\n', 'utf8')
+  await writeFile(join(dir, 'tracked.txt'), 'v1\n', 'utf8')
+  await git('git', ['add', '.'], { cwd: dir })
+  await git('git', ['commit', '-m', 'init'], { cwd: dir })
+}
 
 describe('snapshotWorkspace', () => {
   it('snapshots files with relative paths, hashes, and kinds', async () => {
@@ -104,6 +118,36 @@ describe('scanMetadata / sameMetadata', () => {
     await writeFile(join(dir, 'new.txt'), 'new', 'utf8')
     const second = await scanMetadata(dir, ignore)
     expect(sameMetadata(first, second)).toBe(false)
+  })
+})
+
+describe('git candidate fast path', () => {
+  it('lists changed paths for a git workspace', async () => {
+    await initGitRepo()
+    await writeFile(join(dir, 'tracked.txt'), 'v2\n', 'utf8')
+    await writeFile(join(dir, 'untracked.txt'), 'new\n', 'utf8')
+    await writeFile(join(dir, 'ignored.log'), 'x\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: dir })
+    await writeFile(join(dir, 'staged.txt'), 'staged\n', 'utf8')
+
+    const paths = await gitChangedPaths(dir)
+    expect(paths).toBeDefined()
+    expect([...(paths ?? [])].sort()).toEqual(['staged.txt', 'tracked.txt', 'untracked.txt'])
+  })
+
+  it('returns undefined outside a git repository', async () => {
+    expect(await gitChangedPaths(dir)).toBeUndefined()
+  })
+
+  it('snapshots only the candidate paths', async () => {
+    await initGitRepo()
+    await writeFile(join(dir, 'tracked.txt'), 'v2\n', 'utf8')
+    await writeFile(join(dir, 'untracked.txt'), 'new\n', 'utf8')
+    const paths = (await gitChangedPaths(dir)) ?? []
+    const ignore = compileIgnorePatterns([])
+    const snapshot = await snapshotCandidates(dir, paths, { maxSnapshotFileSize: MAX, ignore })
+    expect([...snapshot.files.keys()].sort()).toEqual(['tracked.txt', 'untracked.txt'])
+    expect(snapshot.files.get('tracked.txt')?.content).toBe('v2\n')
   })
 })
 
