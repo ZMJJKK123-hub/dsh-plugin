@@ -21,8 +21,11 @@ node install.mjs <path-to-your-dsh-source-tree>
 ```
 
 The installer wires everything: workspace references, root devDependencies,
-this folder's tsconfig/tsdown paths (pointed at your checkout), and the
-profile patch. Then finish with:
+**apps/cli dependencies** (the loader resolves plugin rows from the profile
+directory, whose healed `~/.dsh/profiles/node_modules` mirrors the
+apps/cli dependency closure — without this entry a fresh checkout fails to
+boot with `ERR_MODULE_NOT_FOUND`), this folder's tsconfig/tsdown paths
+(pointed at your checkout), and the profile patch. Then finish with:
 
 ```sh
 cd <path-to-your-dsh-source-tree>

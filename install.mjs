@@ -34,6 +34,11 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 # mount the standalone copies instead. ui-deliverables is disabled because
 # the changes panel claims the same turn-tail slot (single-winner chain);
 # harmless when the checkout already disables it in its bundle.
+# Resolution: the loader resolves bare rows from THIS directory upward, so
+# the packages must be reachable from the profile — the healed
+# ~/.dsh/profiles/node_modules mirrors the apps/cli dependency closure, and
+# install.mjs adds the @dsh-custom entries to apps/cli/package.json for
+# exactly that reason (root devDependencies are invisible to the healer).
 - id: change-monitor
   disabled: true
 
@@ -120,6 +125,34 @@ function wireDevDeps(srcRoot) {
   manifest.devDependencies = deps
   writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
   console.log(`  package.json: added ${missing.join(', ')}`)
+}
+
+/**
+ * Ensure apps/cli/package.json depends on the plugins. This is the load
+ * path that actually matters: the dsh loader resolves bare plugin rows from
+ * the profile directory, and the only fallback there is the healed
+ * ~/.dsh/profiles/node_modules, which mirrors the apps/cli dependency
+ * closure (dependencies + peerDependencies only — root devDependencies are
+ * invisible to it). Without these entries a fresh checkout boots to
+ * ERR_MODULE_NOT_FOUND for every @dsh-custom row.
+ */
+function wireCliDeps(srcRoot) {
+  const file = join(srcRoot, 'apps', 'cli', 'package.json')
+  if (!existsSync(file)) {
+    console.log('  apps/cli/package.json: not found — skipping (non-standard layout)')
+    return
+  }
+  const manifest = JSON.parse(readFileSync(file, 'utf8'))
+  const deps = manifest.dependencies ?? {}
+  const missing = Object.keys(DEV_DEPS).filter(name => deps[name] === undefined)
+  if (missing.length === 0) {
+    console.log('  apps/cli/package.json: dependencies already present')
+    return
+  }
+  for (const name of missing) deps[name] = DEV_DEPS[name]
+  manifest.dependencies = deps
+  writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  console.log(`  apps/cli/package.json: added ${missing.join(', ')}`)
 }
 
 /** Recompute the checkout-relative paths in the plugin tsconfig files. */
@@ -253,6 +286,7 @@ if (srcRoot === '' || !existsSync(join(srcRoot, 'package.json')) || !existsSync(
 console.log(`Installing plugins from ${PLUGINS_ROOT} into ${srcRoot}`)
 wireWorkspace(srcRoot)
 wireDevDeps(srcRoot)
+wireCliDeps(srcRoot)
 wireTsconfigs(srcRoot)
 wireProfilePatch()
 console.log('\nNext:')
