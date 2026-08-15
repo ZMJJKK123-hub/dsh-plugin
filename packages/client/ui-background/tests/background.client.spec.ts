@@ -22,8 +22,8 @@ afterEach(() => {
 function stubFileReader(): void {
   class FakeFileReader {
     result: string | ArrayBuffer | null = null
-    onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null
-    onerror: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null
+    onload: ((ev: ProgressEvent<FileReader>) => unknown) | null = null
+    onerror: ((ev: ProgressEvent<FileReader>) => unknown) | null = null
     readAsDataURL(_blob: Blob): void {
       setTimeout(() => {
         this.result = 'data:image/png;base64,AA=='
