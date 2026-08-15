@@ -4479,7 +4479,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		};
 		//#endregion
 		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\DiffViewer.module.css.mjs
-		const css$2 = "._3xq3Zq_root{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);border-radius:8px;grid-template-columns:minmax(0,1fr);font-size:12.5px;line-height:1.6;display:grid;overflow:hidden}._3xq3Zq_header{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);align-items:center;gap:8px;padding:6px 10px;display:flex}._3xq3Zq_status{text-align:center;width:16px;font-size:12px;font-weight:600}._3xq3Zq_status._3xq3Zq_modified{color:var(--dsw-alias-state-business-primary)}._3xq3Zq_status._3xq3Zq_added{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_status._3xq3Zq_deleted{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_path{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}._3xq3Zq_counts{gap:6px;font-size:12px;display:inline-flex}._3xq3Zq_addCount{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_delCount{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_copy{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;border:none;border-radius:4px;padding:1px 8px;font-size:12px}._3xq3Zq_copy:hover{background:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._3xq3Zq_binary{color:var(--dsw-alias-label-tertiary);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);justify-content:space-between;gap:8px;padding:10px 12px;font-size:12.5px;display:flex}._3xq3Zq_body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-height:480px;padding:4px 0;overflow:auto}._3xq3Zq_line{white-space:pre;grid-template-columns:44px 44px 18px minmax(0,1fr);min-height:20px;display:grid}._3xq3Zq_oldNo,._3xq3Zq_newNo{color:var(--dsw-alias-label-dimmed);text-align:right;user-select:none;padding-right:8px}._3xq3Zq_sign{text-align:center;user-select:none;color:var(--dsw-alias-label-tertiary)}._3xq3Zq_text{color:var(--dsw-alias-label-primary);overflow-x:hidden}._3xq3Zq_lineDel{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 20%, transparent)}._3xq3Zq_lineDel ._3xq3Zq_text,._3xq3Zq_lineDel ._3xq3Zq_sign{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_lineAdd{background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent)}._3xq3Zq_lineAdd ._3xq3Zq_text,._3xq3Zq_lineAdd ._3xq3Zq_sign{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_lineContext{background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 8%, transparent)}._3xq3Zq_skipped{text-align:center;color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 5%, transparent);user-select:none;grid-column:1/-1;padding:2px 0;font-size:12px}";
+		const css$2 = "._3xq3Zq_root{border:1px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-shadow-lv2,0 8px 28px #0f1e4824);font-family:var(--dsw-alias-font-family-mono,ui-monospace, SFMono-Regular, Consolas, monospace);border-radius:12px;grid-template-columns:minmax(0,1fr);font-size:12.5px;line-height:1.6;display:grid;overflow:hidden}._3xq3Zq_header{border-bottom:1px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);align-items:center;gap:8px;padding:6px 10px;display:flex}._3xq3Zq_status{text-align:center;width:16px;font-size:12px;font-weight:600}._3xq3Zq_status._3xq3Zq_modified{color:var(--dsw-alias-state-business-primary)}._3xq3Zq_status._3xq3Zq_added{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_status._3xq3Zq_deleted{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_path{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}._3xq3Zq_counts{gap:6px;font-size:12px;display:inline-flex}._3xq3Zq_addCount{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_delCount{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_copy{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;border:none;border-radius:4px;padding:1px 8px;font-size:12px}._3xq3Zq_copy:hover{background:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._3xq3Zq_binary{color:var(--dsw-alias-label-tertiary);font-family:var(--dsw-alias-font-family,system-ui, sans-serif);justify-content:space-between;gap:8px;padding:10px 12px;font-size:12.5px;display:flex}._3xq3Zq_body{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-height:480px;padding:4px 0;overflow:auto}._3xq3Zq_line{white-space:pre;grid-template-columns:44px 44px 18px minmax(0,1fr);min-height:20px;display:grid}._3xq3Zq_oldNo,._3xq3Zq_newNo{color:var(--dsw-alias-label-dimmed);text-align:right;user-select:none;padding-right:8px}._3xq3Zq_sign{text-align:center;user-select:none;color:var(--dsw-alias-label-tertiary)}._3xq3Zq_text{color:var(--dsw-alias-label-primary);overflow-x:hidden}._3xq3Zq_lineDel{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 20%, transparent)}._3xq3Zq_lineDel ._3xq3Zq_text,._3xq3Zq_lineDel ._3xq3Zq_sign{color:var(--dsw-alias-state-error-primary)}._3xq3Zq_lineAdd{background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent)}._3xq3Zq_lineAdd ._3xq3Zq_text,._3xq3Zq_lineAdd ._3xq3Zq_sign{color:var(--dsw-alias-state-success-primary)}._3xq3Zq_lineContext{background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 8%, transparent)}._3xq3Zq_skipped{text-align:center;color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb, var(--dsw-alias-label-dimmed) 5%, transparent);user-select:none;grid-column:1/-1;padding:2px 0;font-size:12px}";
 		const tagId$2 = "@dsh-custom/dsh-client-ui-change-monitor/DiffViewer.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4489,28 +4489,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var DiffViewer_module_css_default = {
-			"root": "_3xq3Zq_root",
-			"lineContext": "_3xq3Zq_lineContext",
-			"oldNo": "_3xq3Zq_oldNo",
-			"skipped": "_3xq3Zq_skipped",
-			"newNo": "_3xq3Zq_newNo",
-			"modified": "_3xq3Zq_modified",
-			"binary": "_3xq3Zq_binary",
-			"deleted": "_3xq3Zq_deleted",
-			"status": "_3xq3Zq_status",
-			"text": "_3xq3Zq_text",
-			"delCount": "_3xq3Zq_delCount",
 			"header": "_3xq3Zq_header",
 			"lineAdd": "_3xq3Zq_lineAdd",
-			"copy": "_3xq3Zq_copy",
-			"path": "_3xq3Zq_path",
-			"lineDel": "_3xq3Zq_lineDel",
-			"added": "_3xq3Zq_added",
-			"sign": "_3xq3Zq_sign",
 			"addCount": "_3xq3Zq_addCount",
-			"line": "_3xq3Zq_line",
+			"deleted": "_3xq3Zq_deleted",
+			"path": "_3xq3Zq_path",
+			"status": "_3xq3Zq_status",
 			"counts": "_3xq3Zq_counts",
-			"body": "_3xq3Zq_body"
+			"copy": "_3xq3Zq_copy",
+			"binary": "_3xq3Zq_binary",
+			"line": "_3xq3Zq_line",
+			"delCount": "_3xq3Zq_delCount",
+			"oldNo": "_3xq3Zq_oldNo",
+			"newNo": "_3xq3Zq_newNo",
+			"text": "_3xq3Zq_text",
+			"body": "_3xq3Zq_body",
+			"modified": "_3xq3Zq_modified",
+			"skipped": "_3xq3Zq_skipped",
+			"lineDel": "_3xq3Zq_lineDel",
+			"lineContext": "_3xq3Zq_lineContext",
+			"root": "_3xq3Zq_root",
+			"added": "_3xq3Zq_added",
+			"sign": "_3xq3Zq_sign"
 		};
 		/**
 		* Fold one hunk's lines: a run of consecutive context lines longer than
@@ -4714,20 +4714,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var ChangesPanel_module_css_default = {
-			"root": "l2-mUa_root",
 			"row": "l2-mUa_row",
-			"addCount": "l2-mUa_addCount",
 			"delCount": "l2-mUa_delCount",
-			"diff": "l2-mUa_diff",
-			"loading": "l2-mUa_loading",
-			"path": "l2-mUa_path",
+			"deleted": "l2-mUa_deleted",
+			"root": "l2-mUa_root",
+			"status": "l2-mUa_status",
 			"modified": "l2-mUa_modified",
 			"rowSelected": "l2-mUa_rowSelected",
 			"list": "l2-mUa_list",
-			"added": "l2-mUa_added",
 			"counts": "l2-mUa_counts",
-			"deleted": "l2-mUa_deleted",
-			"status": "l2-mUa_status"
+			"addCount": "l2-mUa_addCount",
+			"added": "l2-mUa_added",
+			"path": "l2-mUa_path",
+			"diff": "l2-mUa_diff",
+			"loading": "l2-mUa_loading"
 		};
 		//#endregion
 		//#region src/client/ChangesPanel.tsx
@@ -4804,7 +4804,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		//#endregion
 		//#region \0dsh-css:C:\Users\59639\Desktop\dsh-plugins\packages\client\ui-change-monitor\src\client\ChangesRow.module.css.mjs
-		const css = ".BHSpvq_root{justify-items:start;margin-top:14px;display:grid}.BHSpvq_loading{color:var(--dsw-alias-label-tertiary);padding:3px 10px;font-size:12.5px;line-height:22px}.BHSpvq_noChanges{color:var(--dsw-alias-label-dimmed);padding:3px 10px;font-size:12px;line-height:22px}.BHSpvq_trigger{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:14px;align-items:center;gap:10px;padding:3px 10px;font-size:12.5px;line-height:22px;display:inline-flex}.BHSpvq_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.BHSpvq_files{font-weight:600}.BHSpvq_counts{gap:6px;display:inline-flex}.BHSpvq_addCount{color:var(--dsw-alias-state-success-primary)}.BHSpvq_delCount{color:var(--dsw-alias-state-error-primary)}.BHSpvq_action{color:var(--dsw-alias-label-tertiary)}.BHSpvq_panel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:8px;width:min(720px,100%);margin-top:6px;padding:6px}";
+		const css = ".BHSpvq_root{justify-items:start;margin-top:14px;display:grid}.BHSpvq_loading{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-tertiary);border-radius:999px;align-items:center;gap:6px;padding:2px 12px;font-size:12.5px;line-height:20px;display:inline-flex}.BHSpvq_noChanges{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-tertiary);border-radius:999px;align-items:center;gap:6px;padding:2px 12px;font-size:12px;line-height:20px;display:inline-flex}.BHSpvq_noChanges:before{content:\"✓\";color:var(--dsw-alias-brand-primary);font-size:11px}.BHSpvq_trigger{border:1px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2);box-shadow:var(--dsw-shadow-lv2,0 4px 16px #0f1e481f);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:16px;align-items:center;gap:10px;padding:3px 12px;font-size:12.5px;line-height:22px;display:inline-flex}.BHSpvq_trigger:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-brand-primary)}.BHSpvq_files{font-weight:600}.BHSpvq_counts{gap:6px;display:inline-flex}.BHSpvq_addCount{color:var(--dsw-alias-state-success-primary)}.BHSpvq_delCount{color:var(--dsw-alias-state-error-primary)}.BHSpvq_action{color:var(--dsw-alias-label-tertiary)}.BHSpvq_panel{border:1px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);width:min(720px,100%);box-shadow:var(--dsw-shadow-lv2,0 8px 28px #0f1e4824);border-radius:12px;margin-top:6px;padding:8px}";
 		const tagId = "@dsh-custom/dsh-client-ui-change-monitor/ChangesRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4814,16 +4814,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var ChangesRow_module_css_default = {
-			"delCount": "BHSpvq_delCount",
-			"action": "BHSpvq_action",
 			"loading": "BHSpvq_loading",
-			"noChanges": "BHSpvq_noChanges",
-			"addCount": "BHSpvq_addCount",
-			"root": "BHSpvq_root",
-			"trigger": "BHSpvq_trigger",
-			"files": "BHSpvq_files",
 			"counts": "BHSpvq_counts",
-			"panel": "BHSpvq_panel"
+			"root": "BHSpvq_root",
+			"addCount": "BHSpvq_addCount",
+			"delCount": "BHSpvq_delCount",
+			"panel": "BHSpvq_panel",
+			"action": "BHSpvq_action",
+			"trigger": "BHSpvq_trigger",
+			"noChanges": "BHSpvq_noChanges",
+			"files": "BHSpvq_files"
 		};
 		//#endregion
 		//#region src/client/ChangesRow.tsx
