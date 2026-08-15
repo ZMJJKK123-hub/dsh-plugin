@@ -3,10 +3,11 @@
 .root {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--dsw-shadow-lv2, 0 8px 28px rgba(15, 30, 72, 0.14));
   font-family: var(--dsw-alias-font-family-mono, ui-monospace, SFMono-Regular, Consolas, monospace);
   font-size: 12.5px;
   line-height: 1.6;
@@ -17,7 +18,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  border-bottom: 1px solid var(--dsw-alias-border-l3);
   background: var(--dsw-alias-bg-layer-2);
   font-family: var(--dsw-alias-font-family, system-ui, sans-serif);
 }
