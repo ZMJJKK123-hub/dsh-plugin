@@ -8,11 +8,12 @@
  * once per turn, not twice. A fast metadata-only scan supports the settle
  * check.
  *
- * @module @dsh-custom/dsh-change-monitor
+ * @module @deepseek-ai/dsh-change-monitor
  */
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { lstat, open, readdir, stat } from 'node:fs/promises';
-import { join, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 /** NUL bytes in the first probe window mark a file as binary. */
 const BINARY_PROBE_BYTES = 8192;
 /** Concurrent file reads inside one directory; bounds the open-handle count. */
@@ -341,5 +342,232 @@ export async function isDirectory(absolute) {
     catch {
         return false;
     }
+}
+/**
+ * The workspace's changed paths according to git — modified, added, deleted,
+ * and untracked files relative to HEAD, in forward-slash form. This is the
+ * fast path for large trees: instead of walking every file, only the git
+ * candidate set is snapshotted. Returns undefined when the root is not a git
+ * repository (or git is unavailable), which keeps the full-tree walk as the
+ * fallback.
+ * @param root - workspace root directory.
+ * @returns candidate paths, or undefined for non-git workspaces.
+ */
+export async function gitChangedPaths(root) {
+    // Probe for the repository by filesystem first: spawning git on every
+    // turn-start costs hundreds of milliseconds, which would let a short
+    // turn's before-snapshot drift past the first writes. Non-git workspaces
+    // resolve immediately without any process.
+    if (!await hasGitRoot(root))
+        return undefined;
+    let stdout;
+    try {
+        const result = await execFileAsync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], {
+            cwd: root, encoding: 'utf8', timeout: 10_000,
+        });
+        stdout = result.stdout;
+    }
+    catch {
+        return undefined;
+    }
+    const paths = [];
+    for (const entry of stdout.split('\0')) {
+        if (entry === '')
+            continue;
+        // Porcelain v1 entry: `XY path` (rename: `R  old -> new` — keep the
+        // destination). The -z form has no quoting or newlines to undo.
+        let path = entry.length >= 3 ? entry.slice(3) : entry;
+        const arrow = path.indexOf(' -> ');
+        if (arrow !== -1)
+            path = path.slice(arrow + 4);
+        if (path !== '')
+            paths.push(path);
+    }
+    return paths;
+}
+/**
+ * The current HEAD commit hash, or undefined when the repository has no
+ * commits or git is unavailable.
+ * @param root - workspace root directory.
+ * @returns the HEAD commit hash, or undefined.
+ */
+export async function gitHead(root) {
+    try {
+        const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+            cwd: root, encoding: 'utf8', timeout: 10_000,
+        });
+        const head = stdout.trim();
+        return head === '' ? undefined : head;
+    }
+    catch {
+        return undefined;
+    }
+}
+/**
+ * Paths changed between two commits (`git diff --name-status`). Renames and
+ * copies are reported as one entry with `oldPath`; every other change is a
+ * single-path entry. Returns an empty array when git fails.
+ * @param root - workspace root directory.
+ * @param from - start commit.
+ * @param to - end commit.
+ * @returns the changed-path entries.
+ */
+export async function gitDiffNameStatus(root, from, to) {
+    try {
+        const { stdout } = await execFileAsync('git', ['diff', '--name-status', '-z', '--diff-filter=ACDMRT', from, to], {
+            cwd: root, encoding: 'utf8', timeout: 10_000,
+        });
+        const tokens = stdout.split('\0');
+        const entries = [];
+        for (let index = 0; index < tokens.length;) {
+            const status = tokens[index];
+            index += 1;
+            if (status === undefined || status === '')
+                continue;
+            const code = status[0];
+            if (code === 'R' || code === 'C') {
+                const oldPath = tokens[index];
+                const path = tokens[index + 1];
+                index += 2;
+                if (oldPath !== undefined && path !== undefined && path !== '') {
+                    entries.push({ kind: 'renamed', path, oldPath });
+                }
+            }
+            else {
+                const path = tokens[index];
+                index += 1;
+                if (path !== undefined && path !== '') {
+                    const kind = code === 'A' ? 'added' : code === 'D' ? 'deleted' : 'modified';
+                    entries.push({ kind, path });
+                }
+            }
+        }
+        return entries;
+    }
+    catch {
+        return [];
+    }
+}
+/**
+ * Read one workspace-relative path's content at a git revision, or null when
+ * that revision lacks the path or the content is binary.
+ * @param root - workspace root directory.
+ * @param rev - git revision (commit hash, branch, or HEAD).
+ * @param path - workspace-relative path.
+ * @returns the file's UTF-8 text, or null.
+ */
+export async function readGitFile(root, rev, path) {
+    try {
+        const { stdout } = await execFileAsync('git', ['show', `${rev}:${path}`], { cwd: root, encoding: 'buffer', timeout: 10_000 });
+        if (stdout.subarray(0, 8192).includes(0))
+            return null;
+        return stdout.toString('utf8');
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Whether `root` sits inside a git repository: walk up from the root
+ * looking for a `.git` directory or worktree file (bounded depth). Pure
+ * filesystem probes — no process spawn.
+ * @param root - workspace root directory.
+ * @returns true when a repository boundary is found.
+ */
+async function hasGitRoot(root) {
+    let dir = root;
+    for (let depth = 0; depth < 12; depth += 1) {
+        try {
+            const probe = await stat(join(dir, '.git'));
+            if (probe.isDirectory() || probe.isFile())
+                return true;
+        }
+        catch {
+            // No .git here; walk up one level.
+        }
+        const parent = dirname(dir);
+        if (parent === dir)
+            return false;
+        dir = parent;
+    }
+    return false;
+}
+/**
+ * Snapshot only the given workspace-relative paths (the git candidate set).
+ * Directory entries are rejected (git status lists files, not directories,
+ * with `--untracked-files=all`); the walker's per-file error containment
+ * applies per candidate.
+ *
+ * When `before` is supplied, paths present there but absent from the
+ * candidate set are reconciled: a file still on disk whose content changed
+ * (e.g. committed mid-turn, then edited again) is re-added so the diff sees
+ * it; a file still on disk with unchanged content (committed mid-turn, or
+ * never touched) stays out; only a file gone from disk reads as deleted.
+ * Without this, a mid-turn commit would misreport every committed file as
+ * deleted (the before set holds it, the turn-end candidate set no longer
+ * does).
+ * @param root - workspace root directory.
+ * @param paths - candidate paths relative to the root.
+ * @param options - cap, ignore set, and content-retention choice.
+ * @param before - the turn-start snapshot whose missing paths to reconcile.
+ * @returns the candidate snapshot.
+ */
+export async function snapshotCandidates(root, paths, options, before) {
+    const files = new Map();
+    for (let offset = 0; offset < paths.length; offset += FILE_CONCURRENCY) {
+        const batch = paths.slice(offset, offset + FILE_CONCURRENCY);
+        const metas = await Promise.all(batch.map(path => metaOf(join(root, path), path, options)));
+        for (let index = 0; index < batch.length; index += 1) {
+            // oxlint-disable-next-line typescript/no-non-null-assertion -- batch and metas share lengths
+            const path = batch[index];
+            const meta = metas[index];
+            if (path !== undefined && meta !== undefined)
+                files.set(path, meta);
+        }
+    }
+    if (before !== undefined) {
+        for (const [path] of before.files) {
+            if (files.has(path))
+                continue;
+            const meta = await metaOf(join(root, path), path, options);
+            if (meta === undefined)
+                continue; // Gone from disk: a genuine deletion.
+            // Survivor (committed mid-turn, possibly edited again): re-add it; the
+            // diff engine drops hash-identical entries and reports a changed one as
+            // modified. Without this a mid-turn commit would misread every
+            // committed file as deleted.
+            files.set(path, meta);
+        }
+    }
+    return { root, time: Date.now(), files };
+}
+/** Promisified git invocation (git status / git show). */
+export function execFileAsync(file, args, options) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(file, [...args], { cwd: options.cwd, stdio: ['ignore', 'pipe', 'ignore'] });
+        const chunks = [];
+        let timedOut = false;
+        const timer = setTimeout(() => {
+            timedOut = true;
+            child.kill();
+        }, options.timeout);
+        child.stdout.on('data', (chunk) => { chunks.push(chunk); });
+        child.on('error', reject);
+        child.on('close', (code) => {
+            clearTimeout(timer);
+            if (timedOut) {
+                reject(new Error(`git ${file} timed out`));
+                return;
+            }
+            if (code !== 0) {
+                reject(new Error(`git ${file} exited ${String(code)}`));
+                return;
+            }
+            const stdout = Buffer.concat(chunks);
+            // The generic conditional return type cannot narrow from the runtime branch.
+            // oxlint-disable-next-line typescript/no-unnecessary-type-assertion
+            resolve({ stdout: (options.encoding === 'utf8' ? stdout.toString('utf8') : stdout) });
+        });
+    });
 }
 //# sourceMappingURL=snapshot.js.map

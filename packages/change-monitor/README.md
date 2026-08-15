@@ -1,4 +1,6 @@
-# @dsh-custom/dsh-change-monitor
+# @deepseek-ai/dsh-change-monitor
+
+English | [中文](README.zh.md)
 
 Per-turn file-change monitor: watches the durable session event stream, snapshots the session's workspace at `turn/start` and again after `turn/end` settles, and diffs the two snapshots into a change set that the Web Client renders as a VS Code / Cline-style changes panel.
 
@@ -9,8 +11,9 @@ The monitor is **best effort by design**: a snapshot, diff, or storage failure l
 1. `session/event` with `turn/start` → the monitor records the workspace's file metadata (relative path, size, mtime, SHA-256 hash, text/binary/large kind) into a before snapshot. Text content is retained **only** in the before snapshot — the disk is overwritten by the turn, so only the snapshot can later supply the before text; the retained bytes are released the moment the turn's diff is stored.
 2. The agent works normally; nothing intercepts tools or reads the filesystem mid-turn.
 3. `turn/end` → the monitor waits `settleDelayMs`, re-scans the metadata until it stops changing (bounded by `settleMaxAttempts`), snapshots after (metadata + hash only, no retained content), then diffs. Changed files' after-texts are read from disk at diff time.
-4. The diff is content-based, not timestamp-based: a file the agent rewrote back to its original bytes reports as unchanged. Only `modified` / `added` / `deleted` files enter the change set; binary files and files above the diff cap report size-only summaries.
-5. Change sets persist per session as JSONL under the store root (default `$DSH_HOME/changes/<sessionId>.jsonl`), trimmed to `maxHistory` turns, and are served to the browser through the `changeMonitor` Remote namespace.
+4. In git workspaces the monitor also includes mid-turn commits: it records the turn-start HEAD, diffs it against the current HEAD at turn end, and merges those committed paths into the snapshots. A file modified and committed during the turn reports as modified, an added file as added, a deleted file as deleted; a file that was already dirty at turn start and committed unchanged still shows no change.
+5. The diff is content-based, not timestamp-based: a file the agent rewrote back to its original bytes reports as unchanged. Only `modified` / `added` / `deleted` files enter the change set; binary files and files above the diff cap report size-only summaries.
+6. Change sets persist per session as JSONL under the store root (default `$DSH_HOME/changes/<sessionId>.jsonl`), trimmed to `maxHistory` turns, and are served to the browser through the `changeMonitor` Remote namespace.
 
 ## Remote API
 

@@ -366,4 +366,76 @@ describe('ChangeMonitorService lifecycle', () => {
     const tracked = summary.files.find(file => file.path === 'tracked.txt')
     expect(tracked?.status).toBe('modified')
   })
+
+  it('reports a clean file modified and committed mid-turn as modified', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    // Clean at turn start, modified and committed mid-turn: the turn-end
+    // candidate set is empty, so the committed diff must re-add the file to
+    // both sides and report a modification.
+    await writeFile(join(workspace, 'tracked.txt'), 'v2\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'v2'], { cwd: workspace })
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 after clean-file commit')
+    const tracked = summary.files.find(file => file.path === 'tracked.txt')
+    expect(tracked?.status).toBe('modified')
+  })
+
+  it('reports a file added and committed mid-turn as added', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    await writeFile(join(workspace, 'new.txt'), 'new\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'add new'], { cwd: workspace })
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 after add commit')
+    const added = summary.files.find(file => file.path === 'new.txt')
+    expect(added?.status).toBe('added')
+  })
+
+  it('reports a file deleted and committed mid-turn as deleted', async () => {
+    await git('git', ['init'], { cwd: workspace })
+    await git('git', ['config', 'user.email', 'test@example.com'], { cwd: workspace })
+    await git('git', ['config', 'user.name', 'Test'], { cwd: workspace })
+    await writeFile(join(workspace, 'tracked.txt'), 'v1\n', 'utf8')
+    await git('git', ['add', '.'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'init'], { cwd: workspace })
+
+    const { id, events } = createSession(600)
+    await events('turn/start', 1)
+    await rm(join(workspace, 'tracked.txt'))
+    await git('git', ['add', '-A'], { cwd: workspace })
+    await git('git', ['commit', '-m', 'delete'], { cwd: workspace })
+    await events('turn/end', 1)
+
+    const summary = await waitFor(async () => {
+      const result = await monitor.turn({ sessionId: id, turn: 1 })
+      return result.ok && result.value !== null && result.value.files.length > 0 ? result.value : undefined
+    }, 'turn 1 after delete commit')
+    const deleted = summary.files.find(file => file.path === 'tracked.txt')
+    expect(deleted?.status).toBe('deleted')
+  })
 })

@@ -1,4 +1,6 @@
-# @dsh-custom/dsh-client-ui-change-monitor
+# @deepseek-ai/dsh-client-ui-change-monitor
+
+English | [中文](README.zh.md)
 
 Browser half of the per-turn change monitor: after every completed Agent turn that changed files, a "N files changed" row appears under the closing assistant message; expanding it shows the VS Code / Cline-style file list, and clicking a file opens the inline red-green diff (deletions tinted with the error color, additions with the success color, unchanged context neutral). Long unchanged runs fold to a "N lines skipped" marker, keeping five context lines around each change. Each turn's row compares that turn against the previous turn's end state — exactly what the agent changed in this round.
 

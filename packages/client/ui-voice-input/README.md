@@ -1,4 +1,6 @@
-# @dsh-custom/dsh-client-ui-voice-input
+# @deepseek-ai/dsh-client-ui-voice-input
+
+English | [中文](README.zh.md)
 
 A mic button in the composer's tool row (right seat, before the send button). Clicking starts browser speech recognition (Web Speech API — Edge/Chrome); each final transcript is appended to the draft, composing with whatever is already typed. Clicking again stops. Unsupported browsers render nothing.
 

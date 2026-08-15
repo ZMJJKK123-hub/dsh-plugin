@@ -28,8 +28,8 @@ import {
 import { compileIgnorePatterns, type CompiledIgnore } from './ignore.ts'
 import {
   sameMetadata, scanMetadata, snapshotWorkspace, readTextFile,
-  gitChangedPaths, snapshotCandidates, execFileAsync,
-  type SnapshotFileMeta, type WorkspaceSnapshot,
+  gitChangedPaths, snapshotCandidates, gitDiffNameStatus, gitHead, readGitFile,
+  type GitDiffEntry, type SnapshotFileMeta, type WorkspaceSnapshot,
 } from './snapshot.ts'
 import {
   ChangeSetStore, mergeSessionChangeSets, storedFileOf, summarizeChangeSet, summarizeTurn,
@@ -139,6 +139,8 @@ interface TurnBookkeeping {
    * rather than the full-tree walk; the settle mirrors the same choice.
    */
   git: boolean
+  /** Git HEAD at turn start, used to include mid-turn committed changes. */
+  startHead?: string
 }
 
 /**
@@ -244,6 +246,10 @@ export class ChangeMonitorService extends TypertRemoteService {
     bookkeeping.beforeReady = (async () => {
       const candidates = await gitChangedPaths(cwd)
       bookkeeping.git = candidates !== undefined
+      if (candidates !== undefined) {
+        const head = await gitHead(cwd)
+        if (head !== undefined) bookkeeping.startHead = head
+      }
       bookkeeping.before = candidates === undefined
         ? await snapshotWorkspace(cwd, {
           maxSnapshotFileSize: this.config.maxSnapshotFileSize,
@@ -306,17 +312,31 @@ export class ChangeMonitorService extends TypertRemoteService {
     if (bookkeeping.git) {
       const candidates = await gitChangedPaths(root) ?? []
       await this.waitForStability(root, candidates)
-      after = await snapshotCandidates(root, candidates, {
+      let afterMerged = await snapshotCandidates(root, candidates, {
         maxSnapshotFileSize: this.config.maxSnapshotFileSize,
         ignore: this.ignore,
         retainContent: false,
       }, before)
+      let beforeMerged = before
+      // Include files changed by mid-turn commits: the turn-end candidate set
+      // is clean, so the committed diff between the turn-start HEAD and the
+      // current HEAD is the only record of those paths. Deleted paths enter
+      // the before side from the start commit; added/modified paths enter the
+      // after side from disk.
+      if (bookkeeping.startHead !== undefined) {
+        const committed = await gitDiffNameStatus(root, bookkeeping.startHead, 'HEAD')
+        if (committed.length > 0) {
+          afterMerged = await this.mergeCommittedAfter(root, afterMerged, committed)
+          beforeMerged = await this.mergeCommittedBefore(root, beforeMerged, committed, bookkeeping.startHead)
+        }
+      }
       // A candidate new to the turn-end set (clean at turn start, changed
-      // during the turn) has no before snapshot; git's HEAD version is the
-      // exact turn-start state, so backfill it into the BEFORE snapshot
-      // before diffing. The after snapshot keeps every candidate.
-      const beforeMerged = await this.backfillHeadBefore(root, before, after)
-      const record = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, after)
+      // during the turn but not committed) has no before snapshot; the
+      // turn-start HEAD version is the exact turn-start state, so backfill it
+      // into the BEFORE snapshot before diffing. The after snapshot keeps
+      // every candidate.
+      beforeMerged = await this.backfillHeadBefore(root, beforeMerged, afterMerged, bookkeeping.startHead)
+      const record = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, afterMerged)
       this.latest.set(sessionId, summarizeChangeSet(record))
       this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/stored', turn: bookkeeping.turn })
       if (this.config.historyEnabled) {
@@ -362,25 +382,28 @@ export class ChangeMonitorService extends TypertRemoteService {
 
   /**
    * Backfill before-snapshots for after-side paths absent from the before
-   * snapshot: a file clean at turn start that the turn modified. Its
-   * turn-start content is exactly the git HEAD version, so `git show` supplies
-   * it; untracked new files (absent from HEAD too) stay before-less and the
-   * diff reports them as added.
+   * snapshot: a file clean at turn start that the turn modified but did not
+   * commit. Its turn-start content is exactly the turn-start git revision, so
+   * `git show` supplies it; untracked new files (absent from that revision
+   * too) stay before-less and the diff reports them as added.
    * @param root - workspace root.
    * @param before - the turn-start snapshot (read-only).
    * @param after - the turn-end candidate snapshot.
+   * @param startHead - the git revision at turn start; falls back to HEAD.
    * @returns the before snapshot with the backfilled entries.
    */
   private async backfillHeadBefore(
     root: string,
     before: WorkspaceSnapshot,
     after: WorkspaceSnapshot,
+    startHead?: string,
   ): Promise<WorkspaceSnapshot> {
     const missing = [...after.files.keys()].filter(path => !before.files.has(path))
     if (missing.length === 0) return before
+    const rev = startHead ?? 'HEAD'
     const merged = new Map(before.files)
     for (const path of missing) {
-      const text = await readHeadFile(root, path)
+      const text = await readGitFile(root, rev, path)
       if (text === null) continue
       merged.set(path, {
         size: Buffer.byteLength(text, 'utf8'),
@@ -391,6 +414,77 @@ export class ChangeMonitorService extends TypertRemoteService {
       })
     }
     return { ...before, files: merged }
+  }
+
+  /**
+   * Add committed added/modified/renamed paths to the after snapshot from
+   * disk, so a clean-at-turn-start file that was committed mid-turn still
+   * appears in the diff. Deleted paths stay absent and are represented on the
+   * before side only.
+   * @param root - workspace root.
+   * @param after - the turn-end candidate snapshot.
+   * @param committed - paths changed between turn-start HEAD and current HEAD.
+   * @returns the after snapshot with committed paths added.
+   */
+  private async mergeCommittedAfter(
+    root: string,
+    after: WorkspaceSnapshot,
+    committed: readonly GitDiffEntry[],
+  ): Promise<WorkspaceSnapshot> {
+    const files = new Map(after.files)
+    let changed = false
+    for (const entry of committed) {
+      if (entry.kind === 'deleted') continue
+      if (files.has(entry.path)) continue
+      const snap = await snapshotCandidates(root, [entry.path], {
+        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+        ignore: this.ignore,
+        retainContent: false,
+      })
+      const meta = snap.files.get(entry.path)
+      if (meta !== undefined) {
+        files.set(entry.path, meta)
+        changed = true
+      }
+    }
+    return changed ? { root, time: after.time, files } : after
+  }
+
+  /**
+   * Add committed deleted/modified/renamed-old paths to the before snapshot
+   * from the turn-start git revision, so the diff can report them as deleted
+   * or modified. Added paths stay absent because they did not exist at turn
+   * start.
+   * @param root - workspace root.
+   * @param before - the turn-start snapshot (read-only).
+   * @param committed - paths changed between turn-start HEAD and current HEAD.
+   * @param startHead - the git revision at turn start.
+   * @returns the before snapshot with committed paths added.
+   */
+  private async mergeCommittedBefore(
+    root: string,
+    before: WorkspaceSnapshot,
+    committed: readonly GitDiffEntry[],
+    startHead: string,
+  ): Promise<WorkspaceSnapshot> {
+    const files = new Map(before.files)
+    let changed = false
+    for (const entry of committed) {
+      if (entry.kind === 'added') continue
+      const path = entry.kind === 'renamed' ? entry.oldPath : entry.path
+      if (path === undefined || files.has(path) || this.ignore.isIgnored(path, false)) continue
+      const text = await readGitFile(root, startHead, path)
+      if (text === null) continue
+      files.set(path, {
+        size: Buffer.byteLength(text, 'utf8'),
+        mtimeNs: 0,
+        hash: createHash('sha256').update(text).digest('hex'),
+        kind: 'text',
+        content: text,
+      })
+      changed = true
+    }
+    return changed ? { ...before, files } : before
   }
 
   /** Compute the stored change set from the before/after snapshots. */
@@ -687,23 +781,6 @@ function sameTokens(left: ReadonlyMap<string, CandidateToken>, right: ReadonlyMa
 function mtimeNs(info: { mtimeMs: number; mtimeNs?: number }): number {
   if (info.mtimeNs !== undefined) return info.mtimeNs
   return Math.floor(info.mtimeMs * 1e6)
-}
-
-/**
- * Read one workspace-relative path's content at git HEAD — the exact
- * turn-start state of a file that was clean when the turn began.
- * @param root - workspace root.
- * @param path - workspace-relative path.
- * @returns the file's UTF-8 text, or null when HEAD lacks it or it is binary.
- */
-async function readHeadFile(root: string, path: string): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync('git', ['show', `HEAD:${path}`], { cwd: root, encoding: 'buffer', timeout: 10_000 })
-    if (stdout.subarray(0, 8192).includes(0)) return null
-    return stdout.toString('utf8')
-  } catch {
-    return null
-  }
 }
 
 export default ChangeMonitorService

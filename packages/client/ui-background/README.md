@@ -1,4 +1,6 @@
-# @dsh-custom/dsh-client-ui-background
+# @deepseek-ai/dsh-client-ui-background
+
+English | [中文](README.zh.md)
 
 Custom chat background: upload a photo in **Settings → General → 背景图片**, and it becomes the main-area background. The sidebar keeps its own fill; the image is stored locally (compressed to a JPEG data URL in localStorage) and survives reloads.
 

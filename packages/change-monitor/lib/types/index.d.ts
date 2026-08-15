@@ -11,7 +11,7 @@
  * what that turn changed — including files the agent wrote and later restored
  * (those end up hash-equal and are reported as unchanged).
  *
- * @module @dsh-custom/dsh-change-monitor
+ * @module @deepseek-ai/dsh-change-monitor
  */
 import { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';
@@ -96,8 +96,50 @@ export declare class ChangeMonitorService extends TypertRemoteService {
     private onTurnEnd;
     /** Wait for quiescence, snapshot, diff, persist, and cache. */
     private settleAndDiff;
-    /** Re-scan until the tree's metadata stops changing, bounded by attempts. */
+    /**
+     * Re-scan until the tree's metadata stops changing, bounded by attempts.
+     * The git-candidate variant checks only the changed-path set (seconds on
+     * huge trees); the full-tree variant walks everything.
+     * @param root - workspace root.
+     * @param candidates - git candidate paths (undefined = full-tree scan).
+     */
     private waitForStability;
+    /**
+     * Backfill before-snapshots for after-side paths absent from the before
+     * snapshot: a file clean at turn start that the turn modified but did not
+     * commit. Its turn-start content is exactly the turn-start git revision, so
+     * `git show` supplies it; untracked new files (absent from that revision
+     * too) stay before-less and the diff reports them as added.
+     * @param root - workspace root.
+     * @param before - the turn-start snapshot (read-only).
+     * @param after - the turn-end candidate snapshot.
+     * @param startHead - the git revision at turn start; falls back to HEAD.
+     * @returns the before snapshot with the backfilled entries.
+     */
+    private backfillHeadBefore;
+    /**
+     * Add committed added/modified/renamed paths to the after snapshot from
+     * disk, so a clean-at-turn-start file that was committed mid-turn still
+     * appears in the diff. Deleted paths stay absent and are represented on the
+     * before side only.
+     * @param root - workspace root.
+     * @param after - the turn-end candidate snapshot.
+     * @param committed - paths changed between turn-start HEAD and current HEAD.
+     * @returns the after snapshot with committed paths added.
+     */
+    private mergeCommittedAfter;
+    /**
+     * Add committed deleted/modified/renamed-old paths to the before snapshot
+     * from the turn-start git revision, so the diff can report them as deleted
+     * or modified. Added paths stay absent because they did not exist at turn
+     * start.
+     * @param root - workspace root.
+     * @param before - the turn-start snapshot (read-only).
+     * @param committed - paths changed between turn-start HEAD and current HEAD.
+     * @param startHead - the git revision at turn start.
+     * @returns the before snapshot with committed paths added.
+     */
+    private mergeCommittedBefore;
     /** Compute the stored change set from the before/after snapshots. */
     private buildChangeSet;
     /**

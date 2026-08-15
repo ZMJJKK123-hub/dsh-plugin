@@ -423,6 +423,98 @@ export async function gitChangedPaths(root: string): Promise<string[] | undefine
   return paths
 }
 
+/** One path changed between two git commits, in forward-slash form. */
+export interface GitDiffEntry {
+  readonly kind: 'added' | 'deleted' | 'modified' | 'renamed'
+  /** The current path (for renames, the destination). */
+  readonly path: string
+  /** The previous path, present only for renames. */
+  readonly oldPath?: string
+}
+
+/**
+ * The current HEAD commit hash, or undefined when the repository has no
+ * commits or git is unavailable.
+ * @param root - workspace root directory.
+ * @returns the HEAD commit hash, or undefined.
+ */
+export async function gitHead(root: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: root, encoding: 'utf8', timeout: 10_000,
+    })
+    const head = stdout.trim()
+    return head === '' ? undefined : head
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Paths changed between two commits (`git diff --name-status`). Renames and
+ * copies are reported as one entry with `oldPath`; every other change is a
+ * single-path entry. Returns an empty array when git fails.
+ * @param root - workspace root directory.
+ * @param from - start commit.
+ * @param to - end commit.
+ * @returns the changed-path entries.
+ */
+export async function gitDiffNameStatus(
+  root: string,
+  from: string,
+  to: string,
+): Promise<GitDiffEntry[]> {
+  try {
+    const { stdout } = await execFileAsync('git', ['diff', '--name-status', '-z', '--diff-filter=ACDMRT', from, to], {
+      cwd: root, encoding: 'utf8', timeout: 10_000,
+    })
+    const tokens = stdout.split('\0')
+    const entries: GitDiffEntry[] = []
+    for (let index = 0; index < tokens.length;) {
+      const status = tokens[index]
+      index += 1
+      if (status === undefined || status === '') continue
+      const code = status[0]
+      if (code === 'R' || code === 'C') {
+        const oldPath = tokens[index]
+        const path = tokens[index + 1]
+        index += 2
+        if (oldPath !== undefined && path !== undefined && path !== '') {
+          entries.push({ kind: 'renamed', path, oldPath })
+        }
+      } else {
+        const path = tokens[index]
+        index += 1
+        if (path !== undefined && path !== '') {
+          const kind = code === 'A' ? 'added' : code === 'D' ? 'deleted' : 'modified'
+          entries.push({ kind, path })
+        }
+      }
+    }
+    return entries
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Read one workspace-relative path's content at a git revision, or null when
+ * that revision lacks the path or the content is binary.
+ * @param root - workspace root directory.
+ * @param rev - git revision (commit hash, branch, or HEAD).
+ * @param path - workspace-relative path.
+ * @returns the file's UTF-8 text, or null.
+ */
+export async function readGitFile(root: string, rev: string, path: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['show', `${rev}:${path}`], { cwd: root, encoding: 'buffer', timeout: 10_000 })
+    if (stdout.subarray(0, 8192).includes(0)) return null
+    return stdout.toString('utf8')
+  } catch {
+    return null
+  }
+}
+
 /**
  * Whether `root` sits inside a git repository: walk up from the root
  * looking for a `.git` directory or worktree file (bounded depth). Pure

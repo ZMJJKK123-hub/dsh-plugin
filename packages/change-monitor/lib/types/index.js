@@ -11,7 +11,7 @@
  * what that turn changed — including files the agent wrote and later restored
  * (those end up hash-equal and are reported as unchanged).
  *
- * @module @dsh-custom/dsh-change-monitor
+ * @module @deepseek-ai/dsh-change-monitor
  */
 var __runInitializers = (this && this.__runInitializers) || function (thisArg, initializers, value) {
     var useValue = arguments.length > 2;
@@ -48,12 +48,14 @@ var __esDecorate = (this && this.__esDecorate) || function (ctor, descriptorIn, 
     done = true;
 };
 import z from '@deepseek-ai/schemastery';
+import { createHash } from 'node:crypto';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths';
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import { DEFAULT_CONTEXT_LINES, DEFAULT_MAX_DIFF_CELLS, diffText, } from "./diff.js";
 import { compileIgnorePatterns } from "./ignore.js";
-import { sameMetadata, scanMetadata, snapshotWorkspace, readTextFile, } from "./snapshot.js";
+import { sameMetadata, scanMetadata, snapshotWorkspace, readTextFile, gitChangedPaths, snapshotCandidates, gitDiffNameStatus, gitHead, readGitFile, } from "./snapshot.js";
 import { ChangeSetStore, mergeSessionChangeSets, storedFileOf, summarizeChangeSet, summarizeTurn, } from "./storage.js";
 export * from "./types.js";
 export { ChangeSetStore, mergeSessionChangeSets, summarizeChangeSet, summarizeTurn } from "./storage.js";
@@ -201,17 +203,34 @@ let ChangeMonitorService = (() => {
             if (cwd === undefined)
                 return;
             const bookkeeping = {
-                turn, before: undefined, beforeReady: Promise.resolve(), busy: Promise.resolve(),
+                turn, before: undefined, beforeReady: Promise.resolve(), busy: Promise.resolve(), git: false,
             };
             this.states.set(session.id, bookkeeping);
             // The snapshot runs concurrently with the agent's first steps. In
             // practice it lands long before any tool write (a model round trip
             // separates turn/start from the first tool call); the settle path awaits
             // `beforeReady` so a slow snapshot is still used when it completes in time.
-            bookkeeping.beforeReady = snapshotWorkspace(cwd, {
-                maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-                ignore: this.ignore,
-            }).then((snapshot) => { bookkeeping.before = snapshot; }, (error) => {
+            // A git workspace snapshots only the changed-path candidate set (git
+            // status) — seconds instead of a full-tree walk on huge trees; non-git
+            // workspaces fall back to the full walk.
+            bookkeeping.beforeReady = (async () => {
+                const candidates = await gitChangedPaths(cwd);
+                bookkeeping.git = candidates !== undefined;
+                if (candidates !== undefined) {
+                    const head = await gitHead(cwd);
+                    if (head !== undefined)
+                        bookkeeping.startHead = head;
+                }
+                bookkeeping.before = candidates === undefined
+                    ? await snapshotWorkspace(cwd, {
+                        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+                        ignore: this.ignore,
+                    })
+                    : await snapshotCandidates(cwd, candidates, {
+                        maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+                        ignore: this.ignore,
+                    });
+            })().then(() => undefined, (error) => {
                 this.ctx.logger.warn(`change monitor turn ${turn} before snapshot failed: ${error instanceof Error ? error.message : String(error)}`);
             });
         }
@@ -247,7 +266,6 @@ let ChangeMonitorService = (() => {
                 return;
             }
             await bookkeeping.beforeReady;
-            await this.waitForStability(root);
             const before = bookkeeping.before;
             if (before === undefined) {
                 this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/no-before', turn: bookkeeping.turn });
@@ -256,11 +274,50 @@ let ChangeMonitorService = (() => {
             }
             // The after view needs hashes only: changed files' texts are read from
             // disk at diff time, so the retained-content path runs once per turn.
-            const after = await snapshotWorkspace(root, {
-                maxSnapshotFileSize: this.config.maxSnapshotFileSize,
-                ignore: this.ignore,
-                retainContent: false,
-            });
+            let after;
+            if (bookkeeping.git) {
+                const candidates = await gitChangedPaths(root) ?? [];
+                await this.waitForStability(root, candidates);
+                let afterMerged = await snapshotCandidates(root, candidates, {
+                    maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+                    ignore: this.ignore,
+                    retainContent: false,
+                }, before);
+                let beforeMerged = before;
+                // Include files changed by mid-turn commits: the turn-end candidate set
+                // is clean, so the committed diff between the turn-start HEAD and the
+                // current HEAD is the only record of those paths. Deleted paths enter
+                // the before side from the start commit; added/modified paths enter the
+                // after side from disk.
+                if (bookkeeping.startHead !== undefined) {
+                    const committed = await gitDiffNameStatus(root, bookkeeping.startHead, 'HEAD');
+                    if (committed.length > 0) {
+                        afterMerged = await this.mergeCommittedAfter(root, afterMerged, committed);
+                        beforeMerged = await this.mergeCommittedBefore(root, beforeMerged, committed, bookkeeping.startHead);
+                    }
+                }
+                // A candidate new to the turn-end set (clean at turn start, changed
+                // during the turn but not committed) has no before snapshot; the
+                // turn-start HEAD version is the exact turn-start state, so backfill it
+                // into the BEFORE snapshot before diffing. The after snapshot keeps
+                // every candidate.
+                beforeMerged = await this.backfillHeadBefore(root, beforeMerged, afterMerged, bookkeeping.startHead);
+                const record = await this.buildChangeSet(sessionId, bookkeeping.turn, beforeMerged, afterMerged);
+                this.latest.set(sessionId, summarizeChangeSet(record));
+                this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/stored', turn: bookkeeping.turn });
+                if (this.config.historyEnabled) {
+                    await this.store.append(record);
+                }
+                return;
+            }
+            else {
+                await this.waitForStability(root);
+                after = await snapshotWorkspace(root, {
+                    maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+                    ignore: this.ignore,
+                    retainContent: false,
+                });
+            }
             const record = await this.buildChangeSet(sessionId, bookkeeping.turn, before, after);
             this.latest.set(sessionId, summarizeChangeSet(record));
             this.eventLog.push({ time: Date.now(), session: sessionId, type: 'debug/stored', turn: bookkeeping.turn });
@@ -268,16 +325,123 @@ let ChangeMonitorService = (() => {
                 await this.store.append(record);
             }
         }
-        /** Re-scan until the tree's metadata stops changing, bounded by attempts. */
-        async waitForStability(root) {
+        /**
+         * Re-scan until the tree's metadata stops changing, bounded by attempts.
+         * The git-candidate variant checks only the changed-path set (seconds on
+         * huge trees); the full-tree variant walks everything.
+         * @param root - workspace root.
+         * @param candidates - git candidate paths (undefined = full-tree scan).
+         */
+        async waitForStability(root, candidates) {
             await delay(this.config.settleDelayMs);
             for (let attempt = 0; attempt < this.config.settleMaxAttempts; attempt += 1) {
-                const first = await scanMetadata(root, this.ignore);
+                const first = candidates !== undefined
+                    ? await candidateTokens(root, candidates)
+                    : await scanMetadata(root, this.ignore);
                 await delay(this.config.settleDelayMs);
-                const second = await scanMetadata(root, this.ignore);
-                if (sameMetadata(first, second))
+                const second = candidates !== undefined
+                    ? await candidateTokens(root, candidates)
+                    : await scanMetadata(root, this.ignore);
+                if (candidates !== undefined ? sameTokens(first, second) : sameMetadata(first, second))
                     return;
             }
+        }
+        /**
+         * Backfill before-snapshots for after-side paths absent from the before
+         * snapshot: a file clean at turn start that the turn modified but did not
+         * commit. Its turn-start content is exactly the turn-start git revision, so
+         * `git show` supplies it; untracked new files (absent from that revision
+         * too) stay before-less and the diff reports them as added.
+         * @param root - workspace root.
+         * @param before - the turn-start snapshot (read-only).
+         * @param after - the turn-end candidate snapshot.
+         * @param startHead - the git revision at turn start; falls back to HEAD.
+         * @returns the before snapshot with the backfilled entries.
+         */
+        async backfillHeadBefore(root, before, after, startHead) {
+            const missing = [...after.files.keys()].filter(path => !before.files.has(path));
+            if (missing.length === 0)
+                return before;
+            const rev = startHead ?? 'HEAD';
+            const merged = new Map(before.files);
+            for (const path of missing) {
+                const text = await readGitFile(root, rev, path);
+                if (text === null)
+                    continue;
+                merged.set(path, {
+                    size: Buffer.byteLength(text, 'utf8'),
+                    mtimeNs: 0,
+                    hash: createHash('sha256').update(text).digest('hex'),
+                    kind: 'text',
+                    content: text,
+                });
+            }
+            return { ...before, files: merged };
+        }
+        /**
+         * Add committed added/modified/renamed paths to the after snapshot from
+         * disk, so a clean-at-turn-start file that was committed mid-turn still
+         * appears in the diff. Deleted paths stay absent and are represented on the
+         * before side only.
+         * @param root - workspace root.
+         * @param after - the turn-end candidate snapshot.
+         * @param committed - paths changed between turn-start HEAD and current HEAD.
+         * @returns the after snapshot with committed paths added.
+         */
+        async mergeCommittedAfter(root, after, committed) {
+            const files = new Map(after.files);
+            let changed = false;
+            for (const entry of committed) {
+                if (entry.kind === 'deleted')
+                    continue;
+                if (files.has(entry.path))
+                    continue;
+                const snap = await snapshotCandidates(root, [entry.path], {
+                    maxSnapshotFileSize: this.config.maxSnapshotFileSize,
+                    ignore: this.ignore,
+                    retainContent: false,
+                });
+                const meta = snap.files.get(entry.path);
+                if (meta !== undefined) {
+                    files.set(entry.path, meta);
+                    changed = true;
+                }
+            }
+            return changed ? { root, time: after.time, files } : after;
+        }
+        /**
+         * Add committed deleted/modified/renamed-old paths to the before snapshot
+         * from the turn-start git revision, so the diff can report them as deleted
+         * or modified. Added paths stay absent because they did not exist at turn
+         * start.
+         * @param root - workspace root.
+         * @param before - the turn-start snapshot (read-only).
+         * @param committed - paths changed between turn-start HEAD and current HEAD.
+         * @param startHead - the git revision at turn start.
+         * @returns the before snapshot with committed paths added.
+         */
+        async mergeCommittedBefore(root, before, committed, startHead) {
+            const files = new Map(before.files);
+            let changed = false;
+            for (const entry of committed) {
+                if (entry.kind === 'added')
+                    continue;
+                const path = entry.kind === 'renamed' ? entry.oldPath : entry.path;
+                if (path === undefined || files.has(path) || this.ignore.isIgnored(path, false))
+                    continue;
+                const text = await readGitFile(root, startHead, path);
+                if (text === null)
+                    continue;
+                files.set(path, {
+                    size: Buffer.byteLength(text, 'utf8'),
+                    mtimeNs: 0,
+                    hash: createHash('sha256').update(text).digest('hex'),
+                    kind: 'text',
+                    content: text,
+                });
+                changed = true;
+            }
+            return changed ? { ...before, files } : before;
         }
         /** Compute the stored change set from the before/after snapshots. */
         async buildChangeSet(sessionId, turn, before, after) {
@@ -505,6 +669,47 @@ function withoutContent(file) {
 /** One-shot delay; the monitor's best-effort wrapper tolerates teardown races. */
 function delay(ms) {
     return new Promise((resolve) => { setTimeout(resolve, ms); });
+}
+/**
+ * Stability tokens for the git candidate set only — stat each candidate
+ * (bounded concurrency), so the settle check costs seconds even when the
+ * workspace holds tens of thousands of files.
+ * @param root - workspace root.
+ * @param candidates - candidate paths.
+ * @returns path -> token map; unreadable paths are absent.
+ */
+async function candidateTokens(root, candidates) {
+    const tokens = new Map();
+    const CONCURRENCY = 32;
+    for (let offset = 0; offset < candidates.length; offset += CONCURRENCY) {
+        const batch = candidates.slice(offset, offset + CONCURRENCY);
+        const infos = await Promise.all(batch.map(path => stat(join(root, path)).catch(() => undefined)));
+        for (let index = 0; index < batch.length; index += 1) {
+            const path = batch[index];
+            const info = infos[index];
+            if (path !== undefined && info?.isFile()) {
+                tokens.set(path, { size: info.size, mtimeNs: mtimeNs(info) });
+            }
+        }
+    }
+    return tokens;
+}
+/** Whether two candidate token maps agree. */
+function sameTokens(left, right) {
+    if (left.size !== right.size)
+        return false;
+    for (const [path, token] of left) {
+        const other = right.get(path);
+        if (other === undefined || other.size !== token.size || other.mtimeNs !== token.mtimeNs)
+            return false;
+    }
+    return true;
+}
+/** Nanosecond mtime, with the millisecond fallback for odd filesystems. */
+function mtimeNs(info) {
+    if (info.mtimeNs !== undefined)
+        return info.mtimeNs;
+    return Math.floor(info.mtimeMs * 1e6);
 }
 export default ChangeMonitorService;
 //# sourceMappingURL=index.js.map
