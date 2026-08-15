@@ -31,7 +31,9 @@ const DEV_DEPS = {
 
 const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join('/')} (@dsh-custom/*): the web-app
 # bundle rows still name the in-tree @deepseek-ai packages; disable them and
-# mount the standalone copies instead.
+# mount the standalone copies instead. ui-deliverables is disabled because
+# the changes panel claims the same turn-tail slot (single-winner chain);
+# harmless when the checkout already disables it in its bundle.
 - id: change-monitor
   disabled: true
 
@@ -39,6 +41,12 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
   disabled: true
 
 - id: ui-voice-input
+  disabled: true
+
+- id: ui-background
+  disabled: true
+
+- id: ui-deliverables
   disabled: true
 
 - insert:
@@ -50,6 +58,9 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 
     - id: ui-voice-input-standalone
       name: '@dsh-custom/dsh-client-ui-voice-input'
+
+    - id: ui-background-standalone
+      name: '@dsh-custom/dsh-client-ui-background'
 `
 
 function fail(message) {
