@@ -15,7 +15,8 @@
  * After install: run `pnpm install` in the checkout, restart dsh web, and
  * refresh the browser.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -277,6 +278,91 @@ function wireProfilePatch() {
   }
 }
 
+/**
+ * Wire the vendored third-party plugins (third-party/* under this folder):
+ * every package declaring `dsh.bundle` becomes a profile dependency
+ * (link:) plus a profile-bundle-layer entry, the profile is installed, and
+ * the router-standard agent preset is copied into ~/.dsh/.agent-presets.
+ * This keeps the whole stack self-contained — a fresh machine only needs
+ * the checkout and this folder, no upstream git pulls.
+ */
+function wireThirdParty() {
+  const home = process.env.DSH_HOME !== undefined && process.env.DSH_HOME !== ''
+    ? process.env.DSH_HOME
+    : join(homedir(), '.dsh')
+  const profileDir = join(home, 'profiles', 'web')
+  const manifestFile = join(profileDir, 'package.json')
+  const thirdParty = join(PLUGINS_ROOT, 'third-party')
+  if (!existsSync(thirdParty)) {
+    console.log('  third-party: none found')
+    return
+  }
+  if (!existsSync(manifestFile)) {
+    console.log(`  third-party: ${manifestFile} missing — start dsh web once to initialize the profile, then re-run`)
+    return
+  }
+
+  const bundles = []
+  for (const entry of readdirSync(thirdParty)) {
+    if (entry === 'router-standard') continue // preset, not a bundle
+    const pkgFile = join(thirdParty, entry, 'package.json')
+    if (!existsSync(pkgFile)) continue
+    const manifest = JSON.parse(readFileSync(pkgFile, 'utf8'))
+    if (manifest.dsh?.bundle?.patch !== undefined) {
+      bundles.push({ name: manifest.name, dir: join(thirdParty, entry) })
+    }
+  }
+  if (bundles.length === 0) {
+    console.log('  third-party: no bundle packages found')
+    return
+  }
+
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+  const deps = manifest.dependencies ?? {}
+  const list = manifest.dsh?.profile?.bundles ?? []
+  let changed = false
+  for (const bundle of bundles) {
+    const spec = `link:${slash(bundle.dir)}`
+    if (deps[bundle.name] !== spec) { deps[bundle.name] = spec; changed = true }
+    if (!list.includes(bundle.name)) { list.push(bundle.name); changed = true }
+  }
+  if (changed) {
+    manifest.dependencies = deps
+    manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: list } }
+    writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+    console.log(`  third-party: wired ${bundles.map(bundle => bundle.name).join(', ')} into the profile`)
+    const result = spawnSync('pnpm', ['install'], { cwd: profileDir, stdio: 'inherit', shell: process.platform === 'win32' })
+    if (result.status !== 0) {
+      console.log('  third-party: pnpm install in the profile failed — re-run after fixing')
+    }
+  } else {
+    console.log('  third-party: already wired')
+  }
+
+  // Router-standard agent preset (idempotent copy).
+  const presetSrc = join(thirdParty, 'router-standard')
+  if (existsSync(presetSrc)) {
+    const target = join(home, '.agent-presets', 'router-standard')
+    mkdirSync(target, { recursive: true })
+    copyTree(presetSrc, target)
+    console.log('  third-party: router-standard preset copied')
+  }
+}
+
+/** Recursively copy one directory tree into another (idempotent overwrite). */
+function copyTree(source, target) {
+  for (const entry of readdirSync(source)) {
+    const from = join(source, entry)
+    const to = join(target, entry)
+    if (statSync(from).isDirectory()) {
+      mkdirSync(to, { recursive: true })
+      copyTree(from, to)
+    } else {
+      copyFileSync(from, to)
+    }
+  }
+}
+
 // ── main ────────────────────────────────────────────────────────────────────
 
 const srcRoot = resolve(process.argv[2] ?? '')
@@ -289,6 +375,7 @@ wireDevDeps(srcRoot)
 wireCliDeps(srcRoot)
 wireTsconfigs(srcRoot)
 wireProfilePatch()
+wireThirdParty()
 console.log('\nNext:')
 console.log(`  cd ${srcRoot}`)
 console.log('  pnpm install')

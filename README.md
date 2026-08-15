@@ -25,7 +25,11 @@ The installer wires everything: workspace references, root devDependencies,
 directory, whose healed `~/.dsh/profiles/node_modules` mirrors the
 apps/cli dependency closure — without this entry a fresh checkout fails to
 boot with `ERR_MODULE_NOT_FOUND`), this folder's tsconfig/tsdown paths
-(pointed at your checkout), and the profile patch. Then finish with:
+(pointed at your checkout), the profile patch, and the **vendored
+third-party bundles** under `third-party/` (profile links + bundles layer +
+the router-standard agent preset). The whole stack is self-contained: a
+fresh machine only needs the checkout and this folder — no upstream git
+pulls. Then finish with:
 
 ```sh
 cd <path-to-your-dsh-source-tree>
