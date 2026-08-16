@@ -24,8 +24,15 @@ export interface BrowserSession {
   readonly targetId: string
 }
 
+/** One CDP response frame. */
+interface CdpResponse {
+  readonly id?: number
+  readonly result?: Record<string, unknown>
+  readonly error?: { readonly code: number; readonly message: string }
+}
+
 interface PendingCall {
-  readonly resolve: (value: unknown) => void
+  readonly resolve: (value: CdpResponse) => void
   readonly reject: (reason: Error) => void
   readonly timer: NodeJS.Timeout
 }
@@ -89,7 +96,7 @@ async function findPageTarget(port: number): Promise<{ id: string; webSocketDebu
   throw new Error('Timed out waiting for Edge page target')
 }
 
-function cdpSend(session: BrowserSession, method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+function cdpSend(session: BrowserSession, method: string, params: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const id = nextId
     nextId += 1
@@ -97,7 +104,17 @@ function cdpSend(session: BrowserSession, method: string, params: Record<string,
       pending.delete(id)
       reject(new Error(`CDP ${method} timed out`))
     }, 30_000)
-    pending.set(id, { resolve, reject, timer })
+    pending.set(id, {
+      resolve: (message) => {
+        if (message.error !== undefined) {
+          reject(new Error(`CDP ${method} failed: ${message.error.message}`))
+          return
+        }
+        resolve(message.result ?? {})
+      },
+      reject,
+      timer,
+    })
     session.ws.send(JSON.stringify({ id, method, params }))
   })
 }
@@ -156,9 +173,9 @@ export async function openBrowser(url: string, headless: boolean): Promise<Brows
   }
 
   ws.onmessage = (event: MessageEvent) => {
-    let message: { id?: number; method?: string }
+    let message: CdpResponse & { method?: string }
     try {
-      message = JSON.parse(String(event.data)) as { id?: number; method?: string }
+      message = JSON.parse(String(event.data)) as CdpResponse & { method?: string }
     } catch {
       return
     }
@@ -190,9 +207,10 @@ export async function screenshotPage(
   session: BrowserSession,
   outputPath: string,
 ): Promise<{ path: string; bytes: number }> {
-  const result = await cdpSend(session, 'Page.captureScreenshot', { format: 'png' }) as { data?: string }
-  if (result.data === undefined) throw new Error('CDP screenshot returned no data')
-  const buffer = Buffer.from(result.data, 'base64')
+  const result = await cdpSend(session, 'Page.captureScreenshot', { format: 'png' })
+  const data = result.data
+  if (typeof data !== 'string') throw new Error('CDP screenshot returned no data')
+  const buffer = Buffer.from(data, 'base64')
   await writeFile(outputPath, buffer)
   return { path: outputPath, bytes: buffer.length }
 }
@@ -202,23 +220,24 @@ export async function evaluatePage(
   session: BrowserSession,
   expression: string,
 ): Promise<{ ok: boolean; result?: unknown; error?: string }> {
-  const result = await cdpSend(session, 'Runtime.evaluate', {
+  const response = await cdpSend(session, 'Runtime.evaluate', {
     expression,
     returnByValue: true,
     awaitPromise: true,
-  }) as {
-    result?: { type?: string; value?: unknown; description?: string }
-    exceptionDetails?: { text?: string; exception?: { description?: string } }
-  }
-  if (result.exceptionDetails !== undefined) {
+  })
+  const exceptionDetails = response.exceptionDetails as
+    | { text?: string; exception?: { description?: string } }
+    | undefined
+  if (exceptionDetails !== undefined) {
     return {
       ok: false,
-      error: result.exceptionDetails.exception?.description
-        ?? result.exceptionDetails.text
+      error: exceptionDetails.exception?.description
+        ?? exceptionDetails.text
         ?? 'page evaluation failed',
     }
   }
-  return { ok: true, result: result.result?.value }
+  const evaluated = response.result as { type?: string; value?: unknown; description?: string } | undefined
+  return { ok: true, result: evaluated?.value }
 }
 
 /** Close the browser, kill the child process, and remove its profile. */

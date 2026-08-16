@@ -111,7 +111,14 @@ export async function takeScreenshot(
     ? defaultScreenshotPath()
     : options.outputPath
   const command = screenshotCommand(process.platform, outputPath, options.region)
-  const result = await ctx.shell.run(ctx.shell.resolve({ command, timeoutMs: 30_000, signal }))
+  const result = await ctx.shell.run(ctx.shell.resolve({
+    command,
+    timeoutMs: 30_000,
+    signal,
+    // Screen capture needs desktop/display access that a file-effect sandbox
+    // would otherwise block, so the command always runs full-access.
+    sandboxPolicy: { mode: 'danger-full-access', workspaceRoot: process.cwd() },
+  }))
   if (result.exitCode !== 0) {
     const detail = result.stderr.text !== '' ? result.stderr.text : result.stdout.text
     throw new Error(`screenshot failed: ${detail.trim()}`)

@@ -79,7 +79,11 @@ async function takeScreenshot(ctx, options, signal) {
 	const result = await ctx.shell.run(ctx.shell.resolve({
 		command,
 		timeoutMs: 3e4,
-		signal
+		signal,
+		sandboxPolicy: {
+			mode: "danger-full-access",
+			workspaceRoot: process.cwd()
+		}
 	}));
 	if (result.exitCode !== 0) {
 		const detail = result.stderr.text !== "" ? result.stderr.text : result.stdout.text;

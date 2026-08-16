@@ -64,7 +64,13 @@ function cdpSend(session, method, params = {}) {
 			reject(/* @__PURE__ */ new Error(`CDP ${method} timed out`));
 		}, 3e4);
 		pending.set(id, {
-			resolve,
+			resolve: (message) => {
+				if (message.error !== void 0) {
+					reject(/* @__PURE__ */ new Error(`CDP ${method} failed: ${message.error.message}`));
+					return;
+				}
+				resolve(message.result ?? {});
+			},
 			reject,
 			timer
 		});
@@ -160,9 +166,9 @@ async function openBrowser(url, headless) {
 }
 /** Capture the current page as a PNG file. */
 async function screenshotPage(session, outputPath) {
-	const result = await cdpSend(session, "Page.captureScreenshot", { format: "png" });
-	if (result.data === void 0) throw new Error("CDP screenshot returned no data");
-	const buffer = Buffer.from(result.data, "base64");
+	const data = (await cdpSend(session, "Page.captureScreenshot", { format: "png" })).data;
+	if (typeof data !== "string") throw new Error("CDP screenshot returned no data");
+	const buffer = Buffer.from(data, "base64");
 	await writeFile(outputPath, buffer);
 	return {
 		path: outputPath,
@@ -171,18 +177,19 @@ async function screenshotPage(session, outputPath) {
 }
 /** Evaluate a JavaScript expression in the page and return the JSON-safe value. */
 async function evaluatePage(session, expression) {
-	const result = await cdpSend(session, "Runtime.evaluate", {
+	const response = await cdpSend(session, "Runtime.evaluate", {
 		expression,
 		returnByValue: true,
 		awaitPromise: true
 	});
-	if (result.exceptionDetails !== void 0) return {
+	const exceptionDetails = response.exceptionDetails;
+	if (exceptionDetails !== void 0) return {
 		ok: false,
-		error: result.exceptionDetails.exception?.description ?? result.exceptionDetails.text ?? "page evaluation failed"
+		error: exceptionDetails.exception?.description ?? exceptionDetails.text ?? "page evaluation failed"
 	};
 	return {
 		ok: true,
-		result: result.result?.value
+		result: response.result?.value
 	};
 }
 /** Close the browser, kill the child process, and remove its profile. */
