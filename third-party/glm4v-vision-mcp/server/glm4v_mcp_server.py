@@ -771,13 +771,10 @@ def help_resource() -> str:
 def main() -> None:
     try:
         mcp.run()
-    except KeyboardInterrupt:
-        # Parent terminal Ctrl+C: normal shutdown for a stdio child.
-        pass
-    except Exception:
-        # Stdio transport teardown during parent shutdown can raise
-        # CancelledError / WouldBlock / BrokenPipeError. These are expected
-        # when the Node.js host closes the pipe; do not spam stderr.
+    except BaseException:
+        # Parent Ctrl+C and stdio teardown raise KeyboardInterrupt /
+        # CancelledError / WouldBlock / BrokenPipeError while the Node.js host
+        # shuts down. These are expected for a stdio child; never spam stderr.
         pass
 
 
