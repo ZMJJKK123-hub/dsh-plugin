@@ -46,7 +46,10 @@ export function apply(ctx: ClientContext): void {
     const questions = knownQuestions.get(sessionId) ?? new Set<string>()
 
     if (!seeded.has(sessionId)) {
-      // Baseline on first sight: never play sounds for history replay.
+      // Wait for the session to finish loading before establishing the
+      // baseline; otherwise a refresh would seed an empty snapshot and then
+      // replay history as new turns when the conversation opens.
+      if (snapshot.openState === 'cold' || snapshot.openState === 'loading') return
       for (const turn of snapshot.turnEnds.keys()) turns.add(turn)
       for (const pending of snapshot.pending) {
         if (pending.kind === 'question') questions.add(pending.key)

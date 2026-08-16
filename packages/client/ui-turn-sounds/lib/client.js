@@ -310,6 +310,7 @@ window.__ModuleLoader__.load({
 				const turns = knownTurns.get(sessionId) ?? /* @__PURE__ */ new Set();
 				const questions = knownQuestions.get(sessionId) ?? /* @__PURE__ */ new Set();
 				if (!seeded.has(sessionId)) {
+					if (snapshot.openState === "cold" || snapshot.openState === "loading") return;
 					for (const turn of snapshot.turnEnds.keys()) turns.add(turn);
 					for (const pending of snapshot.pending) if (pending.kind === "question") questions.add(pending.key);
 					seeded.add(sessionId);
