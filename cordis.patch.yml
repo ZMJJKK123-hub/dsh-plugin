@@ -16,6 +16,9 @@
     - id: ui-background
       name: '@dsh-custom/dsh-client-ui-background'
 
+    - id: ui-turn-sounds-standalone
+      name: '@dsh-custom/dsh-client-ui-turn-sounds'
+
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
 

@@ -28,6 +28,7 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-client-ui-change-monitor': 'workspace:*',
   '@dsh-custom/dsh-client-ui-voice-input': 'workspace:*',
   '@dsh-custom/dsh-client-ui-background': 'workspace:*',
+  '@dsh-custom/dsh-client-ui-turn-sounds': 'workspace:*',
   '@dsh-custom/dsh-tool-screenshot': 'workspace:*',
 }
 
@@ -68,6 +69,9 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 
     - id: ui-background-standalone
       name: '@dsh-custom/dsh-client-ui-background'
+
+    - id: ui-turn-sounds-standalone
+      name: '@dsh-custom/dsh-client-ui-turn-sounds'
 
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
@@ -186,6 +190,12 @@ function wireTsconfigs(srcRoot) {
     'packages/client/ui-settings', 'packages/client/ui-slots',
     'packages/runtime-diagnostics/invariants',
   ]
+  const turnSoundsRefs = [
+    'vendor/cordis',
+    'packages/client/locale', 'packages/client/runtime',
+    'packages/client/ui-settings', 'packages/client/ui-slots',
+    'packages/runtime-diagnostics/invariants',
+  ]
   const specs = [
     {
       dir: join(PLUGINS_ROOT, 'packages/change-monitor'),
@@ -217,6 +227,11 @@ function wireTsconfigs(srcRoot) {
       extends: baseClient,
       refs: backgroundRefs,
     },
+    {
+      dir: join(PLUGINS_ROOT, 'packages/client/ui-turn-sounds'),
+      extends: baseClient,
+      refs: turnSoundsRefs,
+    },
   ]
   for (const spec of specs) {
     const file = join(spec.dir, 'tsconfig.json')
@@ -245,13 +260,14 @@ function wireTsconfigs(srcRoot) {
     console.log(`  ${file}: rewrote paths`)
   }
   // tsdown configs import the checkout's shared client preset.
-  for (const pkg of ['packages/client/ui-change-monitor', 'packages/client/ui-voice-input', 'packages/client/ui-background']) {
+  for (const pkg of ['packages/client/ui-change-monitor', 'packages/client/ui-voice-input', 'packages/client/ui-background', 'packages/client/ui-turn-sounds']) {
     const file = join(PLUGINS_ROOT, pkg, 'tsdown.config.ts')
     const preset = slash(join(srcRoot, 'packages/client/tsdown.client.ts'))
     const id = {
       'packages/client/ui-change-monitor': '@dsh-custom/dsh-client-ui-change-monitor',
       'packages/client/ui-voice-input': '@dsh-custom/dsh-client-ui-voice-input',
       'packages/client/ui-background': '@dsh-custom/dsh-client-ui-background',
+      'packages/client/ui-turn-sounds': '@dsh-custom/dsh-client-ui-turn-sounds',
     }[pkg]
     const text = `import { clientBundle } from '${relFrom(dirname(file), preset)}'\n\nexport default clientBundle('${id}', ['lib/types/index.js', 'lib/types/invariant.js'])\n`
     if (readFileSync(file, 'utf8') === text) {

@@ -8,6 +8,7 @@ so both can coexist). No dsh source is included in this folder.
 - `packages/client/ui-change-monitor`  `@dsh-custom/dsh-client-ui-change-monitor` (browser changes panel)
 - `packages/client/ui-voice-input`     `@dsh-custom/dsh-client-ui-voice-input`    (composer mic)
 - `packages/client/ui-background`      `@dsh-custom/dsh-client-ui-background`     (custom chat background)
+- `packages/client/ui-turn-sounds`     `@dsh-custom/dsh-client-ui-turn-sounds`    (completion/question sound notifications)
 - `packages/tool-screenshot`           `@dsh-custom/dsh-tool-screenshot`          (screenshot tool for the vision loop)
 
 ## Install (one command)
