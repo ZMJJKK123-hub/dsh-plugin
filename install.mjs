@@ -29,6 +29,7 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-client-ui-voice-input': 'workspace:*',
   '@dsh-custom/dsh-client-ui-background': 'workspace:*',
   '@dsh-custom/dsh-client-ui-turn-sounds': 'workspace:*',
+  '@dsh-custom/dsh-tool-browser': 'workspace:*',
   '@dsh-custom/dsh-tool-screenshot': 'workspace:*',
 }
 
@@ -73,6 +74,9 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
     - id: ui-turn-sounds-standalone
       name: '@dsh-custom/dsh-client-ui-turn-sounds'
 
+    - id: tool-browser-standalone
+      name: '@dsh-custom/dsh-tool-browser'
+
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
 `
@@ -95,6 +99,7 @@ function workspaceLines(srcRoot) {
   const base = relFrom(srcRoot, PLUGINS_ROOT)
   return [
     `- ${base}/packages/change-monitor`,
+    `- ${base}/packages/tool-browser`,
     `- ${base}/packages/tool-screenshot`,
     `- ${base}/packages/client/*`,
   ]
@@ -196,6 +201,11 @@ function wireTsconfigs(srcRoot) {
     'packages/client/ui-settings', 'packages/client/ui-slots',
     'packages/runtime-diagnostics/invariants',
   ]
+  const browserRefs = [
+    'vendor/cordis',
+    'packages/core/tools', 'packages/core/agent',
+    'packages/runtime-diagnostics/invariants',
+  ]
   const specs = [
     {
       dir: join(PLUGINS_ROOT, 'packages/change-monitor'),
@@ -211,6 +221,12 @@ function wireTsconfigs(srcRoot) {
         'vendor/cordis', 'packages/core/tools', 'packages/fs/fs',
         'packages/shell/shell', 'packages/runtime-diagnostics/invariants',
       ],
+    },
+    {
+      dir: join(PLUGINS_ROOT, 'packages/tool-browser'),
+      extends: base,
+      typeRoots: slash(join(srcRoot, 'node_modules/@types')),
+      refs: browserRefs,
     },
     {
       dir: join(PLUGINS_ROOT, 'packages/client/ui-change-monitor'),

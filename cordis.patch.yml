@@ -19,6 +19,9 @@
     - id: ui-turn-sounds-standalone
       name: '@dsh-custom/dsh-client-ui-turn-sounds'
 
+    - id: tool-browser-standalone
+      name: '@dsh-custom/dsh-tool-browser'
+
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
 

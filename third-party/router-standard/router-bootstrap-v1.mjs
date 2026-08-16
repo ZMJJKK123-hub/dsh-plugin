@@ -97,6 +97,10 @@ export function apply(ctx, config) {
       core = new Set([
         'str_replace_editor', // RL shape: shell + editor
         'screenshot', // self-vision loop
+        'browser_open', // background browser automation
+        'browser_screenshot',
+        'browser_eval',
+        'browser_close',
         'mcp__glm4v__analyze_image',
         'mcp__glm4v__ocr_image',
         'mcp__glm4v__analyze_chart',
