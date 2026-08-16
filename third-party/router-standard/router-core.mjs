@@ -104,7 +104,15 @@ export function coreFor(mode) {
   switch (bandOf(mode)) {
     case 'spec': return ['read', 'edit', 'glob', 'grep'] // read-first
     case 'transition': return ['read', 'edit', 'write', 'glob', 'grep'] // union
-    case 'weak': return ['str_replace_editor'] // RL shape: shell + editor
+    case 'weak': return [
+      'str_replace_editor', // RL shape: shell + editor
+      'screenshot', // self-vision loop
+      'mcp__glm4v__analyze_image',
+      'mcp__glm4v__ocr_image',
+      'mcp__glm4v__analyze_chart',
+      'mcp__glm4v__describe_image',
+      'mcp__glm4v__check_setup',
+    ]
     default: return ['read', 'write', 'edit'] // write-first
   }
 }

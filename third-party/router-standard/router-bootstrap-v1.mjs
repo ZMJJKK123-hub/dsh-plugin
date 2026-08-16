@@ -94,7 +94,15 @@ export function apply(ctx, config) {
       sections = planSection
         ? [planSection, { name: 'router-persona', text: persona, order: 0 }]
         : [{ name: 'router-persona', text: persona, order: 0 }]
-      core = new Set(['str_replace_editor']) // RL shape: shell + editor
+      core = new Set([
+        'str_replace_editor', // RL shape: shell + editor
+        'screenshot', // self-vision loop
+        'mcp__glm4v__analyze_image',
+        'mcp__glm4v__ocr_image',
+        'mcp__glm4v__analyze_chart',
+        'mcp__glm4v__describe_image',
+        'mcp__glm4v__check_setup',
+      ])
     } else {
       persona = personaFor(mode, modelId)
       sections = applyPersona(assembled.sections, persona) // keep all other sections
