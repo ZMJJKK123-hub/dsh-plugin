@@ -25,6 +25,9 @@
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
 
+    - id: tool-input-standalone
+      name: '@dsh-custom/dsh-tool-input'
+
 # GLM-4V vision MCP (replace <DSH_PLUGINS_ROOT> with this folder's absolute path):
 # - id: mcp-glm4v
 #   name: '@deepseek-ai/dsh-mcp-client'

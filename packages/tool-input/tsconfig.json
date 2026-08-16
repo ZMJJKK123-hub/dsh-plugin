@@ -1,0 +1,27 @@
+{
+  "extends": "../../../myself-deepseek-harness/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "typeRoots": [
+      "../../../myself-deepseek-harness/node_modules/@types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../myself-deepseek-harness/vendor/cordis"
+    },
+    {
+      "path": "../../../myself-deepseek-harness/packages/core/tools"
+    },
+    {
+      "path": "../../../myself-deepseek-harness/packages/shell/shell"
+    },
+    {
+      "path": "../../../myself-deepseek-harness/packages/runtime-diagnostics/invariants"
+    }
+  ]
+}

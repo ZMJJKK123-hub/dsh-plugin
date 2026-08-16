@@ -1,6 +1,6 @@
-/**
+﻿/**
  * router-bootstrap: task-aware reasoning-mode router with a continuous
- * react↔spec axis.
+ * react鈫攕pec axis.
  *
  * Reads the session's first user message, classifies the task into a
  * continuous mode in [0,1] (0 = spec plan-first, 1 = react doer), and on the
@@ -10,7 +10,7 @@
  * so resume/reload keeps it.
  *
  * The agent can read and tune its own routing through `dev_router_status` and
- * `dev_router_mode` (self-optimization loop) — mode accepts band names
+ * `dev_router_mode` (self-optimization loop) 鈥?mode accepts band names
  * (spec/spec-lean/balanced/react-lean/react), 0-100 numbers, or 0.0-1.0.
  *
  * Zero external imports on purpose: relative preset rows resolve bare
@@ -30,7 +30,7 @@ export const name = 'router-bootstrap'
 /** Prompt assembly, the tools registry, and the LLM route must exist. */
 export const inject = ['systemPrompt', 'tools', 'llm']
 
-/** Minimal spec → JSON Schema compiler (subset of defineTool's work). */
+/** Minimal spec 鈫?JSON Schema compiler (subset of defineTool's work). */
 function toJsonSchema(spec) {
   const properties = {}
   const required = []
@@ -49,15 +49,15 @@ export function apply(ctx, config) {
   const agents = new Map() // session id -> Agent (live handle, in-process only)
   const firstUserText = new Map() // session id -> first REAL user message text (issue #3 fix)
 
-  // ── 路由模式（v0.2.0 命名，用户定义）───────────────────────────────────────
-  // standard（默认，新）: RL 接口还原——首轮只有 RL 训练句 + shell/str_replace_editor，
-  //   模型"想一段、做一段"（实测 25 步 / 24 工具调用 / 产出文件）。
-  // spec（旧）: 深度思考优先——分类 persona（w7/REACT/SPEC）+ 保留全部 sections，
-  //   模型首轮长思维链（101K 推理 0 行动是其特征，不是缺陷）。
+  // 鈹€鈹€ 璺敱妯″紡锛坴0.2.0 鍛藉悕锛岀敤鎴峰畾涔夛級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // standard锛堥粯璁わ紝鏂帮級: RL 鎺ュ彛杩樺師鈥斺€旈杞彧鏈?RL 璁粌鍙?+ shell/str_replace_editor锛?
+  //   妯″瀷"鎯充竴娈点€佸仛涓€娈?锛堝疄娴?25 姝?/ 24 宸ュ叿璋冪敤 / 浜у嚭鏂囦欢锛夈€?
+  // spec锛堟棫锛? 娣卞害鎬濊€冧紭鍏堚€斺€斿垎绫?persona锛坵7/REACT/SPEC锛? 淇濈暀鍏ㄩ儴 sections锛?
+  //   妯″瀷棣栬疆闀挎€濈淮閾撅紙101K 鎺ㄧ悊 0 琛屽姩鏄叾鐗瑰緛锛屼笉鏄己闄凤級銆?
   const routerMode = config.routerMode === 'spec' ? 'spec' : 'standard'
   const RL_PERSONA = 'You are a helpful software engineer assistant.'
 
-  /** spec 路由模式的首轮工具面（旧行为；weak 也走 default 面）。 */
+  /** spec 璺敱妯″紡鐨勯杞伐鍏烽潰锛堟棫琛屼负锛泈eak 涔熻蛋 default 闈級銆?*/
   function legacyCore(mode) {
     switch (bandOf(mode)) {
       case 'spec': return ['read', 'edit', 'glob', 'grep']
@@ -80,11 +80,11 @@ export function apply(ctx, config) {
     const mode = overrides.get(session.id) ?? firstUserText.get(session.id) ?? sessionMode(session)
     const modelId = agent.options?.model
 
-    // ── 模式分派 ──
-    // standard（RL 接口还原）: 首轮 system = 只有 RL 训练句；身份/Web 定位/工具引导/
-    // 规则 sections 全部移除（minimal 的 complete:true 语义，实测 46 字符 system →
-    // 25 步迭代工作流）。
-    // spec（深度思考优先）: 分类 persona + 保留全部 sections（首轮超长思维链是特征）。
+    // 鈹€鈹€ 妯″紡鍒嗘淳 鈹€鈹€
+    // standard锛圧L 鎺ュ彛杩樺師锛? 棣栬疆 system = 鍙湁 RL 璁粌鍙ワ紱韬唤/Web 瀹氫綅/宸ュ叿寮曞/
+    // 瑙勫垯 sections 鍏ㄩ儴绉婚櫎锛坢inimal 鐨?complete:true 璇箟锛屽疄娴?46 瀛楃 system 鈫?
+    // 25 姝ヨ凯浠ｅ伐浣滄祦锛夈€?
+    // spec锛堟繁搴︽€濊€冧紭鍏堬級: 鍒嗙被 persona + 淇濈暀鍏ㄩ儴 sections锛堥杞秴闀挎€濈淮閾炬槸鐗瑰緛锛夈€?
     const planSection = (assembled.sections || []).find((s) => /plan/i.test(s.name))
     let sections
     let core
@@ -101,6 +101,10 @@ export function apply(ctx, config) {
         'browser_screenshot',
         'browser_eval',
         'browser_close',
+        'mouse_trajectory', // human-hand input simulation
+        'mouse_click',
+        'mouse_scroll',
+        'keyboard_input',
         'mcp__glm4v__analyze_image',
         'mcp__glm4v__ocr_image',
         'mcp__glm4v__analyze_chart',
@@ -132,18 +136,18 @@ export function apply(ctx, config) {
     }
   })
 
-  // ── near-field routing guidance for weak mode (P14/P16/P17/P19/P20) ─────
+  // 鈹€鈹€ near-field routing guidance for weak mode (P14/P16/P17/P19/P20) 鈹€鈹€鈹€鈹€鈹€
   // Every REAL user message in a weak-mode session gets ONE fixed guidance
   // message appended to the inbox right after it (near field, cache-neutral).
-  // v19: depth-adaptive — SIMPLE tasks get the fast-convergence guide;
+  // v19: depth-adaptive 鈥?SIMPLE tasks get the fast-convergence guide;
   // COMPLEX tasks get the deep-exploration guide (depth-first, information-
   // driven stop signal). The persona carries no hard converge anchor
   // (P27: information-driven convergence beats step-driven; user feedback:
   // flash was over-confident / too shallow on complex tasks).
   const GUIDE_WEAK =
-    '\nRouter: classify this task (build or fix) now, then adopt the matching style — build: direct production; fix: inspect-first. Think deeply first, then commit and act.'
+    '\nRouter: classify this task (build or fix) now, then adopt the matching style 鈥?build: direct production; fix: inspect-first. Think deeply first, then commit and act.'
   const GUIDE_DEEP =
-    '\nRouter: classify this task (build or fix) now, then adopt the matching style — build: direct production; fix: inspect-first. Think deeply about the architecture, edge cases, and integration points. Do not spend reasoning on the environment or tooling. Produce when your information is complete. End each reasoning block with a decision or an information need.'
+    '\nRouter: classify this task (build or fix) now, then adopt the matching style 鈥?build: direct production; fix: inspect-first. Think deeply about the architecture, edge cases, and integration points. Do not spend reasoning on the environment or tooling. Produce when your information is complete. End each reasoning block with a decision or an information need.'
 
   ctx.on('session/event', (session, event) => {
     if (event.type !== 'user/message') return
@@ -170,7 +174,7 @@ export function apply(ctx, config) {
     } catch { /* duplicate/ordering races: skip */ }
   })
 
-  // ── router visibility & tuning (agent self-optimization) ────────────────
+  // 鈹€鈹€ router visibility & tuning (agent self-optimization) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   const registerTool = (tool) => {
     ctx.effect(() => ctx.tools.register({
       ...tool,
@@ -202,7 +206,7 @@ export function apply(ctx, config) {
       const mode = overrides.get(session.id) ?? sessionMode(session)
       const modelId = currentAgent()?.options?.model
       return [
-        `router-mode=${routerMode} (standard=RL接口还原 / spec=深度思考优先)`,
+        `router-mode=${routerMode} (standard=RL鎺ュ彛杩樺師 / spec=娣卞害鎬濊€冧紭鍏?`,
         `mode=${fmtMode(mode)} (band=${bandFor(mode)})`,
         `persona=${personaFor(mode, modelId).replace(/\n/g, ' / ')}`,
         `core=[${coreFor(mode).join(', ')}]`,
@@ -225,14 +229,14 @@ export function apply(ctx, config) {
       if (parsed === 'auto') overrides.delete(session.id)
       else overrides.set(session.id, parsed === 'weak' ? 'weak' : clamp01(parsed))
       const current = overrides.get(session.id) ?? sessionMode(session)
-      return `mode=${fmtMode(current)} (band=${bandFor(current)}) — next request applies`
+      return `mode=${fmtMode(current)} (band=${bandFor(current)}) 鈥?next request applies`
     },
   })
 
-  // ── mode-isolated subagent: run a task in a DIFFERENT reasoning mode,
+  // 鈹€鈹€ mode-isolated subagent: run a task in a DIFFERENT reasoning mode,
   //    without touching this session's trajectory (P6 showed tail persona
   //    is ineffective; DSH's native subagent inherits this persona, so the
-  //    only working isolation is a fresh LLM call with its own system). ──
+  //    only working isolation is a fresh LLM call with its own system). 鈹€鈹€
   registerTool({
     name: 'dev_mode_subagent',
     description: 'Run one task in a DIFFERENT reasoning mode than this session, in a fresh isolated context (own system prompt). The current session trajectory is untouched. Mode: spec (plan-first) / weak (internal routing) / react (doer) / balanced. Returns the subagent\'s answer text.',
@@ -271,7 +275,7 @@ export function apply(ctx, config) {
         return `subagent error: ${error && error.message ? error.message : String(error)}`
       }
       const head = text.slice(0, 3000)
-      return `[mode-subagent ${bandFor(parsed)} | reasoning ${reasoningChars} chars]\n${head}${text.length > 3000 ? '\n…(truncated)' : ''}`
+      return `[mode-subagent ${bandFor(parsed)} | reasoning ${reasoningChars} chars]\n${head}${text.length > 3000 ? '\n鈥?truncated)' : ''}`
     },
   })
 

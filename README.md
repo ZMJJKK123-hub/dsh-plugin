@@ -11,6 +11,7 @@ so both can coexist). No dsh source is included in this folder.
 - `packages/client/ui-turn-sounds`     `@dsh-custom/dsh-client-ui-turn-sounds`    (completion/question sound notifications)
 - `packages/tool-browser`              `@dsh-custom/dsh-tool-browser`             (background headless browser automation)
 - `packages/tool-screenshot`           `@dsh-custom/dsh-tool-screenshot`          (screenshot tool for the vision loop)
+- `packages/tool-input`                `@dsh-custom/dsh-tool-input`               (mouse trajectory/click/drag/scroll + keyboard input)
 
 ## Install (one command)
 

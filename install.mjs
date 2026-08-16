@@ -31,6 +31,7 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-client-ui-turn-sounds': 'workspace:*',
   '@dsh-custom/dsh-tool-browser': 'workspace:*',
   '@dsh-custom/dsh-tool-screenshot': 'workspace:*',
+  '@dsh-custom/dsh-tool-input': 'workspace:*',
 }
 
 const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join('/')} (@dsh-custom/*): the web-app
@@ -79,6 +80,9 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 
     - id: tool-screenshot-standalone
       name: '@dsh-custom/dsh-tool-screenshot'
+
+    - id: tool-input-standalone
+      name: '@dsh-custom/dsh-tool-input'
 `
 
 function fail(message) {
@@ -101,6 +105,7 @@ function workspaceLines(srcRoot) {
     `- ${base}/packages/change-monitor`,
     `- ${base}/packages/tool-browser`,
     `- ${base}/packages/tool-screenshot`,
+    `- ${base}/packages/tool-input`,
     `- ${base}/packages/client/*`,
   ]
 }
@@ -227,6 +232,15 @@ function wireTsconfigs(srcRoot) {
       extends: base,
       typeRoots: slash(join(srcRoot, 'node_modules/@types')),
       refs: browserRefs,
+    },
+    {
+      dir: join(PLUGINS_ROOT, 'packages/tool-input'),
+      extends: base,
+      typeRoots: slash(join(srcRoot, 'node_modules/@types')),
+      refs: [
+        'vendor/cordis', 'packages/core/tools',
+        'packages/shell/shell', 'packages/runtime-diagnostics/invariants',
+      ],
     },
     {
       dir: join(PLUGINS_ROOT, 'packages/client/ui-change-monitor'),
