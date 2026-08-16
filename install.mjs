@@ -4,7 +4,7 @@
  *
  *   node install.mjs <path-to-dsh-source-tree>
  *
- * Wires the three @dsh-custom packages into a source-run dsh checkout:
+ * Wires the @dsh-custom packages into a source-run dsh checkout:
  *   1. adds the workspace references to the checkout's pnpm-workspace.yaml
  *   2. adds the @dsh-custom devDependencies to the checkout's root package.json
  *   3. rewrites this folder's tsconfig/tsdown paths to point at that checkout
@@ -28,6 +28,7 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-client-ui-change-monitor': 'workspace:*',
   '@dsh-custom/dsh-client-ui-voice-input': 'workspace:*',
   '@dsh-custom/dsh-client-ui-background': 'workspace:*',
+  '@dsh-custom/dsh-tool-screenshot': 'workspace:*',
 }
 
 const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join('/')} (@dsh-custom/*): the web-app
@@ -67,6 +68,9 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 
     - id: ui-background-standalone
       name: '@dsh-custom/dsh-client-ui-background'
+
+    - id: tool-screenshot-standalone
+      name: '@dsh-custom/dsh-tool-screenshot'
 `
 
 function fail(message) {
@@ -87,6 +91,7 @@ function workspaceLines(srcRoot) {
   const base = relFrom(srcRoot, PLUGINS_ROOT)
   return [
     `- ${base}/packages/change-monitor`,
+    `- ${base}/packages/tool-screenshot`,
     `- ${base}/packages/client/*`,
   ]
 }
@@ -189,6 +194,15 @@ function wireTsconfigs(srcRoot) {
       refs: hostRefs,
     },
     {
+      dir: join(PLUGINS_ROOT, 'packages/tool-screenshot'),
+      extends: base,
+      typeRoots: slash(join(srcRoot, 'node_modules/@types')),
+      refs: [
+        'vendor/cordis', 'packages/core/tools', 'packages/fs/fs',
+        'packages/shell/shell', 'packages/runtime-diagnostics/invariants',
+      ],
+    },
+    {
       dir: join(PLUGINS_ROOT, 'packages/client/ui-change-monitor'),
       extends: baseClient,
       refs: [...clientRefs, '!standalone-change-monitor'],
@@ -276,6 +290,56 @@ function wireProfilePatch() {
   } else {
     console.log(`  profile patch: ${file} already customized — add the @dsh-custom rows manually (see cordis.patch.yml in this folder)`)
   }
+}
+
+/**
+ * Wire the vendored GLM-4V vision MCP server into the web profile patch.
+ * The row points at this folder's third-party copy so a fresh machine only
+ * needs the checkout, this folder, and one local `install.ps1`/`install.sh`
+ * run to create the venv and `.env`.
+ */
+function wireVisionMcp() {
+  const home = process.env.DSH_HOME !== undefined && process.env.DSH_HOME !== ''
+    ? process.env.DSH_HOME
+    : join(homedir(), '.dsh')
+  const file = join(home, 'profiles', 'web', 'cordis.patch.yml')
+  const mcpDir = join(PLUGINS_ROOT, 'third-party', 'glm4v-vision-mcp')
+  const serverPy = join(mcpDir, 'server', 'glm4v_mcp_server.py')
+  if (!existsSync(serverPy)) {
+    console.log('  vision-mcp: glm4v-vision-mcp not vendored; skipping')
+    return
+  }
+  const python = process.platform === 'win32'
+    ? join(mcpDir, '.venv', 'Scripts', 'python.exe')
+    : join(mcpDir, '.venv', 'bin', 'python')
+  if (!existsSync(python)) {
+    console.log(`  vision-mcp: venv missing — run install.ps1/install.sh once in ${mcpDir}`)
+  }
+  if (!existsSync(file)) {
+    console.log(`  vision-mcp: ${file} missing — start dsh web once, then re-run`)
+    return
+  }
+  const text = readFileSync(file, 'utf8')
+  if (text.includes('mcp-glm4v')) {
+    console.log('  vision-mcp: profile patch already registered')
+    return
+  }
+  const entry = `
+
+# GLM-4.6V 视觉理解 MCP → DSH 原生工具（mcp__glm4v__*）
+- id: mcp-glm4v
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: glm4v
+    transport: stdio
+    command: '${slash(python)}'
+    args:
+      - '${slash(serverPy)}'
+    toolCallTimeoutMs: 300000
+    failOnStartupError: false
+`
+  writeFileSync(file, `${text}${entry}`, 'utf8')
+  console.log(`  vision-mcp: added mcp-glm4v row to ${file}`)
 }
 
 /**
@@ -376,6 +440,7 @@ wireCliDeps(srcRoot)
 wireTsconfigs(srcRoot)
 wireProfilePatch()
 wireThirdParty()
+wireVisionMcp()
 console.log('\nNext:')
 console.log(`  cd ${srcRoot}`)
 console.log('  pnpm install')

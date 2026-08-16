@@ -2,6 +2,10 @@
 node_modules/
 *.tsbuildinfo
 
+# Vendored GLM-4V MCP server local runtime
+third-party/glm4v-vision-mcp/.venv/
+third-party/glm4v-vision-mcp/server/.env
+
 # Editor / OS noise
 .DS_Store
 Thumbs.db

@@ -1,6 +1,6 @@
 # Standalone DeepSeek Harness plugins — changes monitor + voice input
 
-Three packages extracted from the dsh source tree, published under the
+These packages are extracted from the dsh source tree, published under the
 `@dsh-custom/*` scope (the `@deepseek-ai/*` originals stay in the checkout,
 so both can coexist). No dsh source is included in this folder.
 
@@ -8,6 +8,7 @@ so both can coexist). No dsh source is included in this folder.
 - `packages/client/ui-change-monitor`  `@dsh-custom/dsh-client-ui-change-monitor` (browser changes panel)
 - `packages/client/ui-voice-input`     `@dsh-custom/dsh-client-ui-voice-input`    (composer mic)
 - `packages/client/ui-background`      `@dsh-custom/dsh-client-ui-background`     (custom chat background)
+- `packages/tool-screenshot`           `@dsh-custom/dsh-tool-screenshot`          (screenshot tool for the vision loop)
 
 ## Install (one command)
 
@@ -39,12 +40,32 @@ pnpm install
 and restart `dsh web` + refresh the browser. Re-running `install.mjs` is
 safe (idempotent); move the checkout or this folder and re-run it.
 
+## Vision MCP (GLM-4V)
+
+This repo vendors `third-party/glm4v-vision-mcp` (free GLM-4.6V-Flash). After
+`node install.mjs`, run the vendored installer once to create the venv and
+`server/.env` with your `ZHIPU_API_KEY`:
+
+```powershell
+cd <path>/dsh-plugin/third-party/glm4v-vision-mcp
+Set-ExecutionPolicy -Scope Process Bypass
+.\install.ps1
+```
+
+Then restart `dsh web` and open a new session. Source-run mode automatically
+writes the `mcp-glm4v` row into the web profile patch; installed-dsh mode can
+copy the commented row from `cordis.patch.yml`. The session exposes
+`mcp__glm4v__analyze_image` / `ocr_image` / `analyze_chart` /
+`describe_image` / `check_setup`. Combined with the `screenshot` tool, the
+agent can capture its own screen and recognize the image.
+
 ## Alternative: installed dsh (npm/one-file build, not source-run)
 
 ```sh
 dsh plugin --profile web add <path>/dsh-plugin/packages/change-monitor
 dsh plugin --profile web add <path>/dsh-plugin/packages/client/ui-change-monitor
 dsh plugin --profile web add <path>/dsh-plugin/packages/client/ui-voice-input
+dsh plugin --profile web add <path>/dsh-plugin/packages/tool-screenshot
 ```
 
 and copy the `cordis.patch.yml` rows into `~/.dsh/profiles/web/cordis.patch.yml`.
@@ -56,6 +77,7 @@ presets live there):
 
 ```sh
 pnpm exec tsc -b <path>/dsh-plugin/packages/change-monitor \
+  <path>/dsh-plugin/packages/tool-screenshot \
   <path>/dsh-plugin/packages/client/ui-change-monitor \
   <path>/dsh-plugin/packages/client/ui-voice-input
 pnpm --filter @dsh-custom/dsh-client-ui-change-monitor bundle

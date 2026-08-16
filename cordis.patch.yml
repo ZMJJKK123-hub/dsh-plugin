@@ -15,3 +15,18 @@
 
     - id: ui-background
       name: '@dsh-custom/dsh-client-ui-background'
+
+    - id: tool-screenshot-standalone
+      name: '@dsh-custom/dsh-tool-screenshot'
+
+# GLM-4V vision MCP (replace <DSH_PLUGINS_ROOT> with this folder's absolute path):
+# - id: mcp-glm4v
+#   name: '@deepseek-ai/dsh-mcp-client'
+#   config:
+#     serverName: glm4v
+#     transport: stdio
+#     command: '<DSH_PLUGINS_ROOT>/third-party/glm4v-vision-mcp/.venv/Scripts/python.exe'
+#     args:
+#       - '<DSH_PLUGINS_ROOT>/third-party/glm4v-vision-mcp/server/glm4v_mcp_server.py'
+#     toolCallTimeoutMs: 300000
+#     failOnStartupError: false
