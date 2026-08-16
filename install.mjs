@@ -327,16 +327,17 @@ function wireVisionMcp() {
   const entry = `
 
 # GLM-4.6V 视觉理解 MCP → DSH 原生工具（mcp__glm4v__*）
-- id: mcp-glm4v
-  name: '@deepseek-ai/dsh-mcp-client'
-  config:
-    serverName: glm4v
-    transport: stdio
-    command: '${slash(python)}'
-    args:
-      - '${slash(serverPy)}'
-    toolCallTimeoutMs: 300000
-    failOnStartupError: false
+- insert:
+    - id: mcp-glm4v
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: glm4v
+        transport: stdio
+        command: '${slash(python)}'
+        args:
+          - '${slash(serverPy)}'
+        toolCallTimeoutMs: 300000
+        failOnStartupError: false
 `
   writeFileSync(file, `${text}${entry}`, 'utf8')
   console.log(`  vision-mcp: added mcp-glm4v row to ${file}`)
