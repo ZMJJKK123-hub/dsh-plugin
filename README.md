@@ -13,6 +13,15 @@ so both can coexist). No dsh source is included in this folder.
 - `packages/tool-screenshot`           `@dsh-custom/dsh-tool-screenshot`          (screenshot tool for the vision loop)
 - `packages/tool-input`                `@dsh-custom/dsh-tool-input`               (mouse trajectory/click/drag/scroll + keyboard input)
 
+Vendored third-party plugins/skills live under `third-party/`:
+
+- `third-party/super-injector`               `@dsh-external/dsh-super-injector`  (runtime injector dev tools)
+- `third-party/maid-atelier`                 `@dsh-external/dsh-client-ui-skin-maid-atelier` (custom skin)
+- `third-party/router-standard`              router-standard preset (routing modes)
+- `third-party/j-space`                      J-Space cognition suite skill
+- `third-party/dsh-modef`                    `@magiczerowxy/dsh-modef` (model picker + effort slider)
+- `third-party/glm4v-vision-mcp`             free GLM-4.6V-Flash vision MCP
+
 ## Install (one command)
 
 Clone this repo anywhere, then run the installer with the path of the dsh
