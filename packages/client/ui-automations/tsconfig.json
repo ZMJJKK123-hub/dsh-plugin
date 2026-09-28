@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../myself-deepseek-harness-1.1/tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../myself-deepseek-harness-1.1/vendor/cordis"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../store"
+    },
+    {
+      "path": "../ui-dockkit"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-sidebar-right"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../../../../myself-deepseek-harness-1.1/packages/typert/protocol"
+    }
+  ]
+}

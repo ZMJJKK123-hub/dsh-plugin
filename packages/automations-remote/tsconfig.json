@@ -1,0 +1,24 @@
+{
+  "extends": "../../../myself-deepseek-harness-1.1/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "typeRoots": [
+      "../../../myself-deepseek-harness-1.1/node_modules/@types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../myself-deepseek-harness-1.1/vendor/cordis"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/schedule/automations"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/typert/protocol"
+    }
+  ]
+}

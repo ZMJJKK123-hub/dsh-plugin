@@ -1,0 +1,33 @@
+{
+  "extends": "../../../myself-deepseek-harness-1.1/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "typeRoots": [
+      "../../../myself-deepseek-harness-1.1/node_modules/@types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../myself-deepseek-harness-1.1/vendor/cordis"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/vendor/schemastery"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/git/git"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/sandbox/sandbox"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/sandbox/sandbox-policy"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/subprocess/subprocess"
+    }
+  ]
+}

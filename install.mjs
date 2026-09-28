@@ -32,6 +32,17 @@ const DEV_DEPS = {
   '@dsh-custom/dsh-tool-browser': 'workspace:*',
   '@dsh-custom/dsh-tool-screenshot': 'workspace:*',
   '@dsh-custom/dsh-tool-input': 'workspace:*',
+  '@dsh-custom/dsh-git': 'workspace:*',
+  '@dsh-custom/dsh-git-local': 'workspace:*',
+  '@dsh-custom/dsh-tool-git': 'workspace:*',
+  '@dsh-custom/dsh-git-remote': 'workspace:*',
+  '@dsh-custom/dsh-checkpoint-watcher': 'workspace:*',
+  '@dsh-custom/dsh-automations': 'workspace:*',
+  '@dsh-custom/dsh-automations-remote': 'workspace:*',
+  '@dsh-custom/dsh-cua-guard': 'workspace:*',
+  '@dsh-custom/dsh-client-ui-git': 'workspace:*',
+  '@dsh-custom/dsh-client-ui-automations': 'workspace:*',
+  '@dsh-custom/dsh-client-ui-theme-zai': 'workspace:*',
 }
 
 const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join('/')} (@dsh-custom/*): the web-app
@@ -59,6 +70,36 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 - id: ui-deliverables
   disabled: true
 
+- id: git-local
+  disabled: true
+
+- id: git-remote
+  disabled: true
+
+- id: tool-git
+  disabled: true
+
+- id: checkpoint-watcher
+  disabled: true
+
+- id: automations
+  disabled: true
+
+- id: automations-remote
+  disabled: true
+
+- id: cua-guard
+  disabled: true
+
+- id: ui-git
+  disabled: true
+
+- id: ui-automations
+  disabled: true
+
+- id: ui-theme-zai
+  disabled: true
+
 - insert:
     - id: change-monitor-standalone
       name: '@dsh-custom/dsh-change-monitor'
@@ -83,6 +124,36 @@ const PROFILE_PATCH = `# Standalone plugins from ${PLUGINS_ROOT.split(sep).join(
 
     - id: tool-input-standalone
       name: '@dsh-custom/dsh-tool-input'
+
+    - id: git-local-standalone
+      name: '@dsh-custom/dsh-git-local'
+
+    - id: git-remote-standalone
+      name: '@dsh-custom/dsh-git-remote'
+
+    - id: tool-git-standalone
+      name: '@dsh-custom/dsh-tool-git'
+
+    - id: checkpoint-watcher-standalone
+      name: '@dsh-custom/dsh-checkpoint-watcher'
+
+    - id: automations-standalone
+      name: '@dsh-custom/dsh-automations'
+
+    - id: automations-remote-standalone
+      name: '@dsh-custom/dsh-automations-remote'
+
+    - id: cua-guard-standalone
+      name: '@dsh-custom/dsh-cua-guard'
+
+    - id: ui-git-standalone
+      name: '@dsh-custom/dsh-client-ui-git'
+
+    - id: ui-automations-standalone
+      name: '@dsh-custom/dsh-client-ui-automations'
+
+    - id: ui-theme-zai-standalone
+      name: '@dsh-custom/dsh-client-ui-theme-zai'
 `
 
 function fail(message) {

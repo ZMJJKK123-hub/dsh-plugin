@@ -50,7 +50,7 @@
     "react": "^18.2.0"
   },
   "peerDependencies": {
-    "@dsh-custom/dsh-change-monitor": "*",
+    "@dsh-custom/dsh-change-monitor": "workspace:*",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-runtime": "*",
     "@deepseek-ai/dsh-client-ui-conversation": "*",
@@ -61,7 +61,7 @@
     "@deepseek-ai/cordis": "*"
   },
   "devDependencies": {
-    "@dsh-custom/dsh-change-monitor": "*",
+    "@dsh-custom/dsh-change-monitor": "workspace:*",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-runtime": "*",
     "@deepseek-ai/dsh-client-test-runtime": "*",

@@ -1,0 +1,78 @@
+window.__ModuleLoader__.load({
+	id: "@dsh-custom/dsh-client-ui-theme-zai",
+	factory: (require) => {
+		var module = { exports: {} };
+		var exports = module.exports;
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+		//#region src/client/themes.ts
+		/** The light Zai palette: near-white surfaces, ink foreground, black brand. */
+		const ZAI_LIGHT = {
+			id: "zai-light",
+			colorScheme: "light",
+			tokens: {
+				"--dsw-alias-bg-base": "#f8f8f8",
+				"--dsw-alias-bg-layer-1": "#ffffff",
+				"--dsw-alias-bg-layer-2": "#f0f0f0",
+				"--dsw-alias-bg-overlay": "#ffffff",
+				"--dsw-alias-border-l1": "rgba(13, 13, 13, 0.1)",
+				"--dsw-alias-border-l2": "rgba(13, 13, 13, 0.15)",
+				"--dsw-alias-brand-primary": "#000000",
+				"--dsw-alias-label-primary": "#0d0d0d",
+				"--dsw-alias-label-secondary": "rgba(13, 13, 13, 0.6)",
+				"--dsw-alias-state-error-primary": "#dc2626",
+				"--dsw-alias-state-success-primary": "#16a34a",
+				"--dsw-alias-state-warn-primary": "#ca8a04",
+				"--dsw-specific-sidebar-fill": "#f0f0f0"
+			}
+		};
+		/** The dark Zai palette: near-black surfaces, white foreground, white brand. */
+		const ZAI_DARK = {
+			id: "zai-dark",
+			colorScheme: "dark",
+			tokens: {
+				"--dsw-alias-bg-base": "#161616",
+				"--dsw-alias-bg-layer-1": "#202020",
+				"--dsw-alias-bg-layer-2": "#2b2b2b",
+				"--dsw-alias-bg-overlay": "#2b2b2b",
+				"--dsw-alias-border-l1": "rgba(255, 255, 255, 0.1)",
+				"--dsw-alias-border-l2": "rgba(255, 255, 255, 0.15)",
+				"--dsw-alias-brand-primary": "#ffffff",
+				"--dsw-alias-label-primary": "#ffffff",
+				"--dsw-alias-label-secondary": "rgba(255, 255, 255, 0.6)",
+				"--dsw-alias-state-error-primary": "#f87171",
+				"--dsw-alias-state-success-primary": "#4ade80",
+				"--dsw-alias-state-warn-primary": "#facc15",
+				"--dsw-specific-sidebar-fill": "#161616"
+			}
+		};
+		//#endregion
+		//#region src/client/index.ts
+		/** Required browser services: the theme registry. */
+		const inject = ["theme"];
+		/**
+		* Client plugin body: register both Zai themes.
+		* @param ctx - client root context carrying the theme runtime.
+		* @returns disposer removing both themes.
+		*/
+		function apply(ctx) {
+			const disposeLight = ctx.theme.register(ZAI_LIGHT);
+			let disposeDark;
+			try {
+				disposeDark = ctx.theme.register(ZAI_DARK);
+			} catch (error) {
+				disposeLight();
+				throw error;
+			}
+			return () => {
+				disposeDark();
+				disposeLight();
+			};
+		}
+		//#endregion
+		exports.apply = apply;
+		exports.inject = inject;
+		return module.exports;
+	}
+});
+
+//# sourceMappingURL=client.js.map

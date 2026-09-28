@@ -1,0 +1,54 @@
+{
+  "extends": "../../../myself-deepseek-harness-1.1/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "typeRoots": [
+      "../../../myself-deepseek-harness-1.1/node_modules/@types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../myself-deepseek-harness-1.1/vendor/cordis"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/vendor/schemastery"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/util/atomic-write"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/core/agent"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/core/agent-default-model"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/core/session"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/interaction/permission-presets"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/llm/llm"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/preset/agent-presets"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/session/session-title"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/util/brand"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/workspace/workspace"
+    },
+    {
+      "path": "../../../myself-deepseek-harness-1.1/packages/util/home-paths"
+    }
+  ]
+}
